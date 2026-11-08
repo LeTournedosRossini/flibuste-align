@@ -7,6 +7,11 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)
 endif()
 
+# MSVC : <windows.h> définit des macros min et max qui cassent std::numeric_limits<T>::max() (Rubber Band et le code de JUCE s'en protègent ainsi).
+if(MSVC)
+  add_compile_definitions(NOMINMAX _USE_MATH_DEFINES)
+endif()
+
 # Le cœur (core/) n'a aucune dépendance : alignement seul. Les étireurs (Rubber Band, Signalsmith Stretch) sont dans tools/ pour l'essai.
 add_library(align_core STATIC core/src/Align.cpp)
 target_include_directories(align_core PUBLIC core/include)
