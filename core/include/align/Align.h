@@ -5,6 +5,7 @@
 // plus vite à deux fois plus lentement que le guide). Le chemin est ensuite lissé selon le réglage de « serrage ».
 // Aucune dépendance : le cœur se compile et se teste seul.
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 namespace align
@@ -57,6 +58,19 @@ struct AlignSettings
 
 // Pour chaque trait du guide, la position (fractionnaire, en traits) du double qui lui correspond. Même longueur que le guide.
 std::vector<double> alignPath (const Features& guide, const Features& dub, const AlignSettings& s = {});
+
+// Analyse du guide, réutilisable pour plusieurs doubles (lot) : les traits du guide ne sont calculés qu'une fois. Le double doit être analysé avec les mêmes
+// `AnalysisSettings` que le guide (mode « même hauteur » ou « harmonies »).
+struct GuideAnalysis
+{
+    Features features;
+    double sampleRate = 44100.0;
+    std::size_t length = 0; // échantillons
+    AnalysisSettings settings;
+};
+GuideAnalysis analyseGuide (const float* guideMono, size_t n, double sampleRate, const AnalysisSettings& an = {});
+// Chemin du double (secondes, un point par trait du guide) à partir d'un guide déjà analysé.
+std::vector<double> alignDubToGuide (const GuideAnalysis& guide, const float* dubMono, size_t nDub, const AlignSettings& a = {});
 
 // Même chose avec des signaux : rend, pour chaque trait du guide, la position du double en SECONDES.
 std::vector<double> alignSignals (const float* guide, size_t nGuide, const float* dub, size_t nDub, double sampleRate,

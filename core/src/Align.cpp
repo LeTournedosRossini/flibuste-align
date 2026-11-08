@@ -1,4 +1,5 @@
 #include "align/Align.h"
+#include "align/Progress.h"
 
 #include <algorithm>
 #include <cmath>
@@ -106,6 +107,7 @@ Features analyse (const float* x, size_t n, double sr, const AnalysisSettings& s
     double maxDb = -200.0;
     for (int i = 0; i < f.frames; ++i)
     {
+        if ((i & 127) == 0) progress::report ((double) i / (double) f.frames);
         // Trait centré sur i * hop.
         const long start = (long) ((size_t) i * hop) - (long) win / 2;
         double energy = 0.0;
@@ -221,6 +223,8 @@ std::vector<double> alignPath (const Features& g, const Features& d, const Align
         if (s.openEnds || j == 0) { const long a = at (0, j); if (a >= 0) cost[(size_t) a] = dist (0, j) * 1.f; }
 
     for (int i = 1; i < N; ++i)
+    {
+        if ((i & 127) == 0) progress::report ((double) i / (double) N);
         for (int o = 0; o < span; ++o)
         {
             const int j = centre (i) - W + o;
@@ -237,6 +241,7 @@ std::vector<double> alignPath (const Features& g, const Features& d, const Align
             }
             if (best != kInf) { cost[(size_t) i * span + o] = best; from[(size_t) i * span + o] = arg; }
         }
+    }
 
     // Arrivée : fermé = (N-1, M-1) (ou, s'il est hors de la bande, le meilleur point de la dernière ligne) ; ouvert = meilleur de la dernière ligne.
     int ej = -1;
@@ -331,6 +336,32 @@ std::vector<double> applyStrength (const std::vector<double>& p, double hop, con
         out[i] = t + std::clamp (s, 0.0, 1.0) * (p[i] - t);
     }
     return out;
+}
+
+GuideAnalysis analyseGuide (const float* g, size_t n, double sr, const AnalysisSettings& an)
+{
+    GuideAnalysis out;
+    out.sampleRate = sr;
+    out.length = n;
+    out.settings = an;
+    out.features = analyse (g, n, sr, an);
+    return out;
+}
+
+std::vector<double> alignDubToGuide (const GuideAnalysis& guide, const float* d, size_t nD, const AlignSettings& a)
+{
+    Features df;
+    {
+        progress::Phase ph (0.0, 0.25); // traits du double
+        df = analyse (d, nD, guide.sampleRate, guide.settings);
+    }
+    std::vector<double> p;
+    {
+        progress::Phase ph (0.25, 1.0); // recherche du chemin
+        p = alignPath (guide.features, df, a);
+    }
+    for (auto& v : p) v *= guide.features.hopSeconds;
+    return p;
 }
 
 std::vector<double> alignSignals (const float* guide, size_t nGuide, const float* dub, size_t nDub, double sr,

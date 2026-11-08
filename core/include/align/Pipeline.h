@@ -28,6 +28,9 @@ struct RenderSettings
 Analysis analysePair (const float* guideMono, size_t nGuide, const float* dubMono, size_t nDub, double sampleRate,
                       const AlignSettings& a = {}, const AnalysisSettings& an = {});
 
+// Même chose à partir d'un guide déjà analysé (lot : une analyse de guide pour N doubles).
+Analysis analyseAgainstGuide (const GuideAnalysis& guide, const float* dubMono, size_t nDub, const AlignSettings& a = {});
+
 RenderResult renderAnalysis (const std::vector<std::vector<float>>& dub, const Analysis& analysis, const RenderSettings& r);
 
 // Suggestion de force variable : repère les passages où le double est très décalé du guide et y pose la force à fond, ailleurs au plus bas.

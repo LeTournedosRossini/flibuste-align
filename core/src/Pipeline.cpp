@@ -1,4 +1,5 @@
 #include "align/Pipeline.h"
+#include "align/Progress.h"
 
 #include <algorithm>
 #include <cmath>
@@ -12,6 +13,22 @@ Analysis analysePair (const float* g, size_t nG, const float* d, size_t nD, doub
     out.length = nG;
     out.path = alignSignals (g, nG, d, nD, sr, a, an);
     out.consonants = findConsonants (d, nD, sr);
+    return out;
+}
+
+Analysis analyseAgainstGuide (const GuideAnalysis& g, const float* d, size_t nD, const AlignSettings& a)
+{
+    Analysis out;
+    out.sampleRate = g.sampleRate;
+    out.length = g.length;
+    {
+        progress::Phase ph (0.0, 0.9);
+        out.path = alignDubToGuide (g, d, nD, a);
+    }
+    {
+        progress::Phase ph (0.9, 1.0);
+        out.consonants = findConsonants (d, nD, g.sampleRate);
+    }
     return out;
 }
 

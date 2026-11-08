@@ -1,4 +1,5 @@
 #include "align/Render.h"
+#include "align/Progress.h"
 
 #include <algorithm>
 #include <cmath>
@@ -64,6 +65,7 @@ Chans renderRubberBand (const Chans& dub, const WarpMap& m, double sr, bool fine
     };
     for (size_t pos = 0; pos < inLen;)
     {
+        progress::report ((double) pos / (double) inLen);
         const size_t n = std::min<size_t> (1024, inLen - pos);
         for (size_t c = 0; c < nch; ++c) ip[c] = in[c].data() + pos;
         pos += n;
@@ -98,6 +100,7 @@ Chans renderSignalsmith (const Chans& dub, const WarpMap& m, double sr)
     long given = s0 + inL;
     for (size_t v = 0; v < total; v += B)
     {
+        if (((v / B) & 63) == 0) progress::report ((double) v / (double) total);
         const size_t nOut = std::min (B, total - v);
         const double uEnd = std::max (0.0, (double) (v + nOut) - (double) outL + (double) delay);
         const long want = std::llround (m.sourceAt (std::min (uEnd, (double) m.outputLength + 2048.0))) + inL;

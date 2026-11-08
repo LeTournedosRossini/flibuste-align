@@ -13,7 +13,7 @@ if(MSVC)
 endif()
 
 # Le cœur (core/) n'a aucune dépendance : alignement seul. Les étireurs (Rubber Band, Signalsmith Stretch) sont dans tools/ pour l'essai.
-add_library(align_core STATIC core/src/Align.cpp)
+add_library(align_core STATIC core/src/Align.cpp core/src/Progress.cpp)
 target_include_directories(align_core PUBLIC core/include)
 set_target_properties(align_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -22,7 +22,7 @@ set(TP ${CMAKE_SOURCE_DIR}/third_party)
 add_library(rubberband_single STATIC ${TP}/rubberband/single/RubberBandSingle.cpp)
 target_include_directories(rubberband_single PUBLIC ${TP}/rubberband)
 set_target_properties(rubberband_single PROPERTIES POSITION_INDEPENDENT_CODE ON)
-add_library(align_render STATIC core/src/Render.cpp core/src/Pipeline.cpp)
+add_library(align_render STATIC core/src/Render.cpp core/src/Pipeline.cpp core/src/Settings.cpp core/src/align_c.cpp)
 target_include_directories(align_render PUBLIC core/include PRIVATE ${TP})
 target_link_libraries(align_render PUBLIC align_core PRIVATE rubberband_single)
 set_target_properties(align_render PROPERTIES POSITION_INDEPENDENT_CODE ON)

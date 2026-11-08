@@ -1,5 +1,7 @@
-add_executable(align_core_tests test_align.cpp test_render.cpp)
+add_executable(align_core_tests test_align.cpp test_render.cpp test_c_api.cpp test_c_header.c)
 target_link_libraries(align_core_tests PRIVATE align_render Catch2::Catch2WithMain)
+find_package(Threads REQUIRED)
+target_link_libraries(align_core_tests PRIVATE Threads::Threads)
 include(CTest)
 include(Catch)
 catch_discover_tests(align_core_tests)
