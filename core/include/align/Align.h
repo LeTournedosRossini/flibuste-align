@@ -71,6 +71,14 @@ std::vector<Segment> findConsonants (const float* x, size_t n, double sampleRate
 // Agit sur le chemin, avant la carte de correspondance. Le décalage est l'écart entre la position trouvée et le temps du guide.
 std::vector<double> applyStrength (const std::vector<double>& pathSeconds, double hopSeconds, double strength);
 
+// Force variable dans le temps : une courbe de points (temps du guide en secondes, force de 0 à 1), jointe par des segments droits. Avant le premier
+// point et après le dernier, la force est celle du point le plus proche. Sert à caler fort une phrase très décalée et à laisser le reste presque tel quel.
+struct StrengthPoint
+{
+    double time = 0, strength = 1;
+};
+std::vector<double> applyStrength (const std::vector<double>& pathSeconds, double hopSeconds, const std::vector<StrengthPoint>& curve);
+
 // Courbe de correspondance en échantillons : pour chaque échantillon de sortie (temps du guide), l'échantillon source du double.
 // Sert aux étireurs. `hop` en secondes est celui de `path`.
 struct WarpMap

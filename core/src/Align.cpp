@@ -309,6 +309,30 @@ std::vector<double> applyStrength (const std::vector<double>& p, double hop, dou
     return out;
 }
 
+std::vector<double> applyStrength (const std::vector<double>& p, double hop, const std::vector<StrengthPoint>& curveIn)
+{
+    if (curveIn.empty()) return p;
+    std::vector<StrengthPoint> curve = curveIn;
+    std::stable_sort (curve.begin(), curve.end(), [] (const StrengthPoint& a, const StrengthPoint& b) { return a.time < b.time; });
+    std::vector<double> out (p.size());
+    size_t j = 0;
+    for (size_t i = 0; i < p.size(); ++i)
+    {
+        const double t = (double) i * hop;
+        while (j + 1 < curve.size() && curve[j + 1].time <= t) ++j;
+        double s;
+        if (t <= curve.front().time) s = curve.front().strength;
+        else if (j + 1 >= curve.size()) s = curve.back().strength;
+        else
+        {
+            const double f = (t - curve[j].time) / std::max (1e-9, curve[j + 1].time - curve[j].time);
+            s = curve[j].strength + f * (curve[j + 1].strength - curve[j].strength);
+        }
+        out[i] = t + std::clamp (s, 0.0, 1.0) * (p[i] - t);
+    }
+    return out;
+}
+
 std::vector<double> alignSignals (const float* guide, size_t nGuide, const float* dub, size_t nDub, double sr,
                                   const AlignSettings& a, const AnalysisSettings& an)
 {

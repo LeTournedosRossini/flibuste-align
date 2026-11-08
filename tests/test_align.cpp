@@ -161,3 +161,17 @@ TEST_CASE ("force du recalage : 0 laisse le double, 1 garde le chemin, 0,5 est a
     }
     CHECK (align::applyStrength (path, 0.005, 7.0)[2] == Catch::Approx (path[2])); // borné à 1
 }
+
+TEST_CASE ("force variable : phrase calée à fond, le reste presque tel quel")
+{
+    std::vector<double> path (400);
+    for (size_t i = 0; i < path.size(); ++i) path[i] = (double) i * 0.005 + 0.1; // double en retard de 100 ms partout
+    const std::vector<align::StrengthPoint> curve { { 0.0, 0.0 }, { 0.5, 0.0 }, { 0.6, 1.0 }, { 1.4, 1.0 }, { 1.5, 0.0 }, { 2.0, 0.0 } };
+    const auto r = align::applyStrength (path, 0.005, curve);
+    CHECK (r[10] == Catch::Approx (10 * 0.005));          // t = 0,05 s : force 0, aucun décalage corrigé
+    CHECK (r[200] == Catch::Approx (200 * 0.005 + 0.1));  // t = 1,0 s : force 1, décalage complet
+    CHECK (r[110] == Catch::Approx (110 * 0.005 + 0.05)); // t = 0,55 s : milieu de la montée
+    CHECK (r[350] == Catch::Approx (350 * 0.005));        // t = 1,75 s : force 0
+    for (size_t i = 1; i < r.size(); ++i) CHECK (r[i] >= r[i - 1]); // la courbe reste croissante
+    CHECK (align::applyStrength (path, 0.005, std::vector<align::StrengthPoint> {}) == path);
+}
