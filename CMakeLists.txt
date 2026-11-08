@@ -17,15 +17,28 @@ set(TP ${CMAKE_SOURCE_DIR}/third_party)
 add_library(rubberband_single STATIC ${TP}/rubberband/single/RubberBandSingle.cpp)
 target_include_directories(rubberband_single PUBLIC ${TP}/rubberband)
 set_target_properties(rubberband_single PROPERTIES POSITION_INDEPENDENT_CODE ON)
-add_library(align_render STATIC core/src/Render.cpp)
+add_library(align_render STATIC core/src/Render.cpp core/src/Pipeline.cpp)
 target_include_directories(align_render PUBLIC core/include PRIVATE ${TP})
 target_link_libraries(align_render PUBLIC align_core PRIVATE rubberband_single)
 set_target_properties(align_render PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+option(ALIGN_BUILD_PLUGIN "Plugin CLAP (JUCE + clap-juce-extensions)" ON)
 option(ALIGN_BUILD_TESTS "Tests du cœur" ON)
 option(ALIGN_BUILD_TOOLS "Outils d'essai (comparaison des étireurs)" ON)
-if(ALIGN_BUILD_TESTS OR ALIGN_BUILD_TOOLS)
+if(ALIGN_BUILD_TESTS OR ALIGN_BUILD_TOOLS OR ALIGN_BUILD_PLUGIN)
   include(FetchContent)
+endif()
+# JUCE 8.0.11 et clap-juce-extensions au commit 7adee3a : les mêmes versions que Neptune (combinaison dont la CI amont est verte).
+if(ALIGN_BUILD_PLUGIN)
+  FetchContent_Declare(JUCE
+    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+    GIT_TAG        8.0.11
+    GIT_SHALLOW    TRUE)
+  FetchContent_Declare(clap_juce_extensions
+    GIT_REPOSITORY https://github.com/free-audio/clap-juce-extensions.git
+    GIT_TAG        7adee3a1bd4684d4caa5601100e364abccff4b4d
+    GIT_SUBMODULES "clap-libs/clap" "clap-libs/clap-helpers")
+  FetchContent_MakeAvailable(JUCE clap_juce_extensions)
 endif()
 if(ALIGN_BUILD_TESTS)
   FetchContent_Declare(Catch2 GIT_REPOSITORY https://github.com/catchorg/Catch2.git GIT_TAG v3.16.1 GIT_SHALLOW TRUE)
@@ -36,4 +49,7 @@ endif()
 if(ALIGN_BUILD_TOOLS)
   find_package(SndFile CONFIG QUIET)
   add_subdirectory(tools)
+endif()
+if(ALIGN_BUILD_PLUGIN)
+  add_subdirectory(adapter-juce)
 endif()

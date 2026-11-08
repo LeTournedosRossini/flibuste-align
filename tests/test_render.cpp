@@ -77,3 +77,30 @@ TEST_CASE ("rendu : cas limites (silence, très court, vide) sans valeur invalid
         CHECK (r.channels[0].size() == 22050);
     }
 }
+
+#include "align/Pipeline.h"
+
+TEST_CASE ("chaîne : analyser une fois, rendre plusieurs fois avec d'autres réglages")
+{
+    const auto p = synth::makePair (5, 0.10);
+    const auto an = align::analysePair (p.guide.audio.data(), p.guide.audio.size(), p.dub.audio.data(), p.dub.audio.size(), 44100.0);
+    CHECK (an.length == p.guide.audio.size());
+    CHECK_FALSE (an.consonants.empty());
+
+    align::RenderSettings full, none;
+    none.strength = 0.0;
+    const auto rFull = align::renderAnalysis ({ p.dub.audio }, an, full);
+    const auto rNone = align::renderAnalysis ({ p.dub.audio }, an, none);
+    CHECK (rFull.channels[0].size() == an.length);
+    CHECK (rNone.channels[0].size() == an.length);
+    // Force 0 : le double reste calé comme avant (pas de déformation) ; force 1 : il est déformé, donc différent.
+    double diff = 0;
+    for (size_t i = 0; i < an.length; ++i) diff += std::fabs (rFull.channels[0][i] - rNone.channels[0][i]);
+    CHECK (diff > 1.0);
+    // La courbe de décalage appliquée suit la force.
+    const auto s1 = align::appliedShift (an, full), s0 = align::appliedShift (an, none);
+    double m1 = 0, m0 = 0;
+    for (size_t i = 0; i < s1.size(); ++i) { m1 = std::max (m1, std::fabs (s1[i])); m0 = std::max (m0, std::fabs (s0[i])); }
+    CHECK (m0 == 0.0);
+    CHECK (m1 > 0.01);
+}

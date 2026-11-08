@@ -30,6 +30,13 @@ Autre piste écartée : élargir la pente maximale à ×3 (`maxSlope`) n'amélio
 ## Premier essai sur de vraies voix chantées (2026-11-08)
 Deux prises de 30 s (voix chantées, avec par endroits de gros décalages). Verdict de Jean à l'oreille : Signalsmith « quasiment parfait, presque trop » et sans passage qui sonne faux ; Rubber Band R3 « un peu bizarre ». Décision : Signalsmith par défaut, R2/R3 gardés en option. Réglage de force ajouté (`applyStrength`, `--strength 0..1`).
 
+## Plugin « Sillage » (CLAP, nom provisoire)
+Dossier `adapter-juce/` : JUCE 8.0.11 + clap-juce-extensions (mêmes versions que Neptune). Effet à poser sur la piste du double ; le guide arrive par l'**entrée latérale** (2e entrée). « Capturer », lancer la lecture sur la phrase, arrêter : le calcul se fait en arrière-plan, puis le plugin rejoue le double recalé à la même place dans le morceau (aucune latence ; hors de la zone capturée le double passe tel quel).
+Réglages : moteur (Signalsmith par défaut, R2, R3), force (et courbe de force dessinable), consonnes protégées, serrage, écart maximal, durée de capture (30 s à 5 min), case « Recalé » pour comparer à l'original. Changer moteur, force, consonnes ou courbe refait seulement le rendu ; changer le serrage ou l'écart maximal refait aussi l'analyse. Les consonnes se modifient à la souris (glisser pour en ajouter, cliquer sur une zone pour la supprimer).
+État sauvegardé dans le projet : réglages, courbe, chemin d'alignement, consonnes, double et guide en FLAC (environ 1 Mo par 10 s).
+Essai sans interface : `adapter-juce/tests/sillage_test.cpp` (faux hôte : transport, entrée latérale, capture, calcul, lecture à 4 ms du guide, force 0, état restauré).
+Limites connues : une seule capture à la fois, la capture est « figée » (si la piste change après, il faut recapturer), interface simple (pas encore le style NOVA), rien testé dans un vrai hôte.
+
 ## À faire
 - Écouter sur de vraies prises (voix, guitare), choisir l'étireur (ou les deux, au choix de l'utilisateur).
 - Étirer moins les consonnes (ancrer les attaques), réglage « souffle / silences ».

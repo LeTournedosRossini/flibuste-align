@@ -78,7 +78,7 @@ Chans renderRubberBand (const Chans& dub, const WarpMap& m, double sr, bool fine
 Chans renderSignalsmith (const Chans& dub, const WarpMap& m, double sr)
 {
     const int nch = (int) dub.size();
-    signalsmith::stretch::SignalsmithStretch<float> st;
+    signalsmith::stretch::SignalsmithStretch<float> st (12345); // graine fixe : deux rendus identiques donnent les mêmes échantillons
     st.presetDefault (nch, (float) sr);
     const int inL = st.inputLatency(), outL = st.outputLatency();
     // Retard constant mesuré sur des doublures à correspondance connue (calage résiduel < 1 ms) : 56,2 ms, soit un peu moins que inL.
