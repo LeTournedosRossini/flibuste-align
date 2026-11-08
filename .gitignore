@@ -1,2 +1,4 @@
 build*/
 *.wav
+!docs/bundle/ref/*.wav
+dist/
