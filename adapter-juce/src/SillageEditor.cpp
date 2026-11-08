@@ -2,8 +2,11 @@
 
 namespace
 {
-const juce::Colour kBack (0xff14181d), kLane (0xff1b2128), kLaneAlt (0xff20272f), kText (0xffd7dde4), kDim (0xff8b96a3), kGuide (0xff6fb1ff), kDub (0xffc9a24b),
-                   kAligned (0xff5fd39a), kCons (0xffe0707a), kCurve (0xffb98cff);
+juce::Colour kBack, kLane, kLaneAlt, kText, kDim, kGuide, kDub, kAligned, kCons, kCurve;
+void applyTheme (const SillageTheme& t)
+{
+    kBack = t.back; kLane = t.lane; kLaneAlt = t.laneAlt; kText = t.text; kDim = t.dim; kGuide = t.guide; kDub = t.dub; kAligned = t.aligned; kCons = t.cons; kCurve = t.curve;
+}
 const juce::String kLaneNames[] = { "Guide", "Double (original)", "Double recalé"_fr, "Consonnes", "Décalage appliqué"_fr, "Force" };
 constexpr int kLabelW = 120;
 } // namespace
@@ -272,8 +275,10 @@ void setupSlider (juce::Slider& s, juce::Label& l, const juce::String& text, juc
 }
 } // namespace
 
-SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor (p), proc_ (p), lanes_ (p)
+SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor (p), proc_ (p), look_ (sillage_look::loadSuiteTheme()), lanes_ (p)
 {
+    applyTheme (look_.theme());
+    setLookAndFeel (&look_);
     setSize (980, 640);
     setResizable (true, true);
     setResizeLimits (760, 520, 1800, 1100);
@@ -320,7 +325,7 @@ SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor 
     startTimerHz (15);
 }
 
-SillageEditor::~SillageEditor() { stopTimer(); }
+SillageEditor::~SillageEditor() { stopTimer(); setLookAndFeel (nullptr); }
 
 void SillageEditor::paint (juce::Graphics& g) { g.fillAll (kBack); }
 

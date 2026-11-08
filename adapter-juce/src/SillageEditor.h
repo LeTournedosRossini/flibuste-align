@@ -1,5 +1,6 @@
 #pragma once
 #include "SillageProcessor.h"
+#include "SillageLook.h"
 
 class SillageEditor;
 
@@ -43,8 +44,9 @@ public:
 private:
     void timerCallback() override;
     SillageProcessor& proc_;
+    SillageLook look_;
     juce::TextButton capture_ { "Capturer" }, finish_ { "Terminer" }, clear_ { "Tout effacer" }, export_ { "Exporter le double recalé (WAV)..."_fr }, clearCurve_ { "Effacer la courbe de force" };
-    juce::ToggleButton aligned_ { "Recalé (décocher : écouter l'original)"_fr };
+    juce::ToggleButton aligned_ { "Recalé"_fr };
     juce::ComboBox engine_, maxShift_, capLen_;
     juce::Slider strength_, protect_, tightness_;
     juce::Label engineL_, maxShiftL_, capLenL_, strengthL_, protectL_, tightnessL_, status_;
