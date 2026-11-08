@@ -279,22 +279,23 @@ SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor 
 {
     applyTheme (look_.theme());
     setLookAndFeel (&look_);
-    setSize (980, 640);
+    setSize (980, 680);
     setResizable (true, true);
-    setResizeLimits (760, 520, 1800, 1100);
+    setResizeLimits (760, 560, 1800, 1100);
     auto& ap = p.parameters();
 
     engine_.addItemList ({ "Signalsmith", "Rubber Band R2", "Rubber Band R3" }, 1);
     maxShift_.addItemList ({ "0,5 s", "1 s", "1,5 s", "2 s", "3 s" }, 1);
     capLen_.addItemList ({ "30 s", "1 min", "2 min", "3 min", "5 min" }, 1);
-    for (auto* c : { &engine_, &maxShift_, &capLen_ }) addAndMakeVisible (*c);
-    const std::pair<juce::Label*, juce::String> labels[] = { { &engineL_, juce::String ("Moteur") }, { &maxShiftL_, "Écart maximal"_fr }, { &capLenL_, "Durée de capture"_fr } };
+    suggestSens_.addItemList ({ "Haute (30 ms)", "Moyenne (60 ms)", "Basse (100 ms)" }, 1);
+    for (auto* c : { &engine_, &maxShift_, &capLen_, &suggestSens_ }) addAndMakeVisible (*c);
+    const std::pair<juce::Label*, juce::String> labels[] = { { &engineL_, juce::String ("Moteur") }, { &maxShiftL_, "Écart maximal"_fr }, { &capLenL_, "Durée de capture"_fr }, { &suggestL_, "Sensibilité"_fr } };
     for (auto& [l, t] : labels) { l->setText (t, juce::dontSendNotification); l->setColour (juce::Label::textColourId, kText); addAndMakeVisible (*l); }
     setupSlider (strength_, strengthL_, "Force", *this);
     setupSlider (protect_, protectL_, "Consonnes protégées"_fr, *this);
     setupSlider (tightness_, tightnessL_, "Serrage", *this);
     addAndMakeVisible (aligned_);
-    for (auto* b : { &capture_, &finish_, &clear_, &export_, &clearCurve_ }) addAndMakeVisible (*b);
+    for (auto* b : { &capture_, &finish_, &clear_, &export_, &suggest_, &clearCurve_ }) addAndMakeVisible (*b);
     status_.setColour (juce::Label::textColourId, kText);
     status_.setFont (juce::Font (juce::FontOptions (15.f)));
     addAndMakeVisible (status_);
@@ -306,6 +307,7 @@ SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor 
     strengthA_ = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (ap, "strength", strength_);
     protectA_ = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (ap, "protect", protect_);
     tightnessA_ = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (ap, "tightness", tightness_);
+    suggestA_ = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (ap, "suggest", suggestSens_);
     alignedA_ = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (ap, "aligned", aligned_);
 
     capture_.onClick = [this] { proc_.armCapture(); };
@@ -321,6 +323,7 @@ SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor 
                                    if (! proc_.exportAligned (f, err)) juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, "Export", err);
                                });
     };
+    suggest_.onClick = [this] { proc_.suggestStrength(); };
     clearCurve_.onClick = [this] { proc_.setStrengthCurve ({}); };
     startTimerHz (15);
 }
@@ -340,9 +343,16 @@ void SillageEditor::resized()
     clear_.setBounds (top.removeFromLeft (110));
     top.removeFromLeft (8);
     export_.setBounds (top.removeFromLeft (230));
-    clearCurve_.setBounds (top.removeFromRight (190));
-    top.removeFromRight (8);
+    top.removeFromLeft (14);
     aligned_.setBounds (top);
+    r.removeFromTop (6);
+    auto forceRow = r.removeFromTop (28); // la force variable : suggestion, sensibilité, effacement
+    suggest_.setBounds (forceRow.removeFromLeft (170));
+    forceRow.removeFromLeft (14);
+    suggestL_.setBounds (forceRow.removeFromLeft (86));
+    suggestSens_.setBounds (forceRow.removeFromLeft (160));
+    forceRow.removeFromLeft (14);
+    clearCurve_.setBounds (forceRow.removeFromLeft (210));
     r.removeFromTop (6);
     status_.setBounds (r.removeFromTop (24));
     r.removeFromTop (6);
@@ -372,5 +382,6 @@ void SillageEditor::timerCallback()
     finish_.setEnabled (ph == SillageProcessor::Phase::Capturing || ph == SillageProcessor::Phase::Armed);
     clear_.setEnabled (ph != SillageProcessor::Phase::Idle);
     export_.setEnabled (proc_.canExport());
+    suggest_.setEnabled (proc_.phase() == SillageProcessor::Phase::Ready);
     lanes_.repaint();
 }

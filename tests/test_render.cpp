@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -103,4 +104,40 @@ TEST_CASE ("chaîne : analyser une fois, rendre plusieurs fois avec d'autres ré
     for (size_t i = 0; i < s1.size(); ++i) { m1 = std::max (m1, std::fabs (s1[i])); m0 = std::max (m0, std::fabs (s0[i])); }
     CHECK (m0 == 0.0);
     CHECK (m1 > 0.01);
+}
+
+TEST_CASE ("suggestion de force : seulement les passages très décalés")
+{
+    align::Analysis a;
+    a.hopSeconds = 0.005;
+    a.path.resize (2000); // 10 s
+    for (size_t i = 0; i < a.path.size(); ++i)
+    {
+        const double t = (double) i * 0.005;
+        double shift = 0.0;
+        if (t >= 2.0 && t < 3.0) shift = 0.100;       // 100 ms : très décalé
+        if (t >= 6.0 && t < 6.5) shift = 0.015;       // 15 ms : trop petit
+        if (t >= 7.0 && t < 7.04) shift = 0.2;        // 40 ms de pic : trop court
+        a.path[i] = t + shift;
+    }
+    const auto c = align::suggestStrengthCurve (a);
+    REQUIRE_FALSE (c.empty());
+    for (size_t i = 1; i < c.size(); ++i) CHECK (c[i].time > c[i - 1].time);
+    auto at = [&] (double t) { // valeur de la courbe en t (constante avant le premier point et après le dernier, comme dans le plugin)
+        if (t <= c.front().time) return c.front().strength;
+        for (size_t i = 1; i < c.size(); ++i)
+            if (t <= c[i].time) return c[i - 1].strength + (c[i].strength - c[i - 1].strength) * (t - c[i - 1].time) / (c[i].time - c[i - 1].time);
+        return c.back().strength;
+    };
+    CHECK (at (2.5) == Catch::Approx (1.0));
+    CHECK (at (0.5) == Catch::Approx (0.0));
+    CHECK (at (6.2) == Catch::Approx (0.0));
+    CHECK (at (7.02) == Catch::Approx (0.0));
+    CHECK (at (9.5) == Catch::Approx (0.0));
+    // Aucun passage au-dessus du seuil : pas de courbe. Tout le morceau décalé : pas de courbe non plus (force constante).
+    align::Analysis flat = a;
+    for (size_t i = 0; i < flat.path.size(); ++i) flat.path[i] = (double) i * 0.005;
+    CHECK (align::suggestStrengthCurve (flat).empty());
+    for (size_t i = 0; i < flat.path.size(); ++i) flat.path[i] = (double) i * 0.005 + 0.2;
+    CHECK (align::suggestStrengthCurve (flat).empty());
 }

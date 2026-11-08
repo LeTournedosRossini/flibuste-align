@@ -30,6 +30,19 @@ Analysis analysePair (const float* guideMono, size_t nGuide, const float* dubMon
 
 RenderResult renderAnalysis (const std::vector<std::vector<float>>& dub, const Analysis& analysis, const RenderSettings& r);
 
+// Suggestion de force variable : repère les passages où le double est très décalé du guide et y pose la force à fond, ailleurs au plus bas.
+// Un passage commence quand le décalage dépasse `thresholdMs` et finit quand il redescend à 60 % du seuil (hystérésis) ; les passages trop courts sont
+// ignorés, ceux qui sont proches sont réunis, chacun est élargi de `padSeconds`, et les transitions durent `rampSeconds`.
+struct SuggestSettings
+{
+    double thresholdMs = 40.0;
+    double high = 1.0, base = 0.0;
+    double padSeconds = 0.25, rampSeconds = 0.15, minSeconds = 0.20, mergeGapSeconds = 0.6;
+};
+// Rend une courbe prête pour `RenderSettings::strengthCurve`, ou une liste vide si aucun passage ne dépasse le seuil (ou si tout le morceau le dépasse :
+// une force constante suffit alors).
+std::vector<StrengthPoint> suggestStrengthCurve (const Analysis& analysis, const SuggestSettings& s = {});
+
 // Décalage (secondes) appliqué à chaque trait après force et protection : pour dessiner la courbe de décalage.
 std::vector<double> appliedShift (const Analysis& analysis, const RenderSettings& r);
 } // namespace align

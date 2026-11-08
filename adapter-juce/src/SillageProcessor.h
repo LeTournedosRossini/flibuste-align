@@ -96,6 +96,8 @@ public:
     double playheadSeconds (bool& valid) const; // position dans la zone capturée, en secondes
     std::vector<align::StrengthPoint> strengthCurve() const;
     void setStrengthCurve (std::vector<align::StrengthPoint>);
+    // Pose une courbe de force proposée d'après les passages très décalés (sensibilité = réglage « suggest »). Rend le nombre de points posés (0 : rien à proposer).
+    int suggestStrength();
     std::vector<align::Segment> consonants() const;
     void setConsonants (std::vector<align::Segment>);
 

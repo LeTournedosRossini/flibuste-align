@@ -45,14 +45,14 @@ private:
     void timerCallback() override;
     SillageProcessor& proc_;
     SillageLook look_;
-    juce::TextButton capture_ { "Capturer" }, finish_ { "Terminer" }, clear_ { "Tout effacer" }, export_ { "Exporter le double recalé (WAV)..."_fr }, clearCurve_ { "Effacer la courbe de force" };
+    juce::TextButton capture_ { "Capturer" }, finish_ { "Terminer" }, clear_ { "Tout effacer" }, export_ { "Exporter le double recalé (WAV)..."_fr }, clearCurve_ { "Effacer la courbe de force" }, suggest_ { "Suggérer la force"_fr };
     juce::ToggleButton aligned_ { "Recalé"_fr };
-    juce::ComboBox engine_, maxShift_, capLen_;
+    juce::ComboBox engine_, maxShift_, capLen_, suggestSens_;
     juce::Slider strength_, protect_, tightness_;
-    juce::Label engineL_, maxShiftL_, capLenL_, strengthL_, protectL_, tightnessL_, status_;
+    juce::Label suggestL_, engineL_, maxShiftL_, capLenL_, strengthL_, protectL_, tightnessL_, status_;
     SillageLanes lanes_;
     std::unique_ptr<juce::FileChooser> chooser_;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> engineA_, maxShiftA_, capLenA_;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> engineA_, maxShiftA_, capLenA_, suggestA_;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> strengthA_, protectA_, tightnessA_;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> alignedA_;
 };

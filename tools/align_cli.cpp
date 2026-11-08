@@ -1,6 +1,6 @@
 // flibuste-align : cale un double sur un guide.
 //   align_cli guide.wav double.wav sortie.wav [--engine signalsmith|r2|r3] [--protect 0..1] [--tightness 0..1]
-//                                             [--max-shift secondes] [--chroma poids] [--strength 0..1 | --strength-points t:force,t:force,...] [--open-ends] [--write-consonants fichier.txt]
+//                                             [--max-shift secondes] [--chroma poids] [--strength 0..1 | --strength-points t:force,t:force,... | --suggest-strength ms] [--open-ends] [--write-consonants fichier.txt]
 // Le résultat a la durée et la fréquence d'échantillonnage du guide (les deux fichiers doivent avoir la même fréquence).
 #include <algorithm>
 #include <chrono>
@@ -13,6 +13,7 @@
 #define DR_WAV_IMPLEMENTATION
 #include "dr_wav/dr_wav.h"
 
+#include "align/Pipeline.h"
 #include "align/Render.h"
 
 namespace
@@ -64,6 +65,7 @@ int main (int argc, char** argv)
     align::AlignSettings as;
     double protect = 0.0, strength = 1.0;
     std::vector<align::StrengthPoint> strengthCurve;
+    double suggestMs = 0.0;
     align::AnalysisSettings an;
     const char* consFile = nullptr;
     for (int i = 4; i < argc; ++i)
@@ -79,6 +81,7 @@ int main (int argc, char** argv)
         else if (a == "--tightness") as.tightness = std::atof (next());
         else if (a == "--max-shift") as.maxShiftSeconds = std::atof (next());
         else if (a == "--strength") strength = std::atof (next());
+        else if (a == "--suggest-strength") suggestMs = std::atof (next());
         else if (a == "--strength-points") // ex. 0:0.2,10:1,18:1,20:0.2 (temps en secondes du guide : force)
         {
             std::string v = next();
@@ -106,6 +109,17 @@ int main (int argc, char** argv)
     const auto t0 = std::chrono::steady_clock::now();
     const auto g = mono (guide), d = mono (dub);
     const auto found = align::alignSignals (g.data(), g.size(), d.data(), d.size(), sr, as, an);
+    if (suggestMs > 0.0)
+    {
+        align::Analysis an;
+        an.path = found;
+        align::SuggestSettings ss;
+        ss.thresholdMs = suggestMs;
+        strengthCurve = align::suggestStrengthCurve (an, ss);
+        std::printf ("suggestion de force (seuil %.0f ms) : %zu points\n", suggestMs, strengthCurve.size());
+        for (const auto& p : strengthCurve) std::printf ("  %6.2f s -> %.0f %%\n", p.time, p.strength * 100);
+        if (strengthCurve.empty()) std::printf ("  aucun passage au-dessus du seuil (ou tout le morceau) : force constante\n");
+    }
     const auto path = strengthCurve.empty() ? align::applyStrength (found, 0.005, strength) : align::applyStrength (found, 0.005, strengthCurve);
     const auto cons = align::findConsonants (d.data(), d.size(), sr);
     const auto map = align::makeWarpMap (path, 0.005, sr, g.size(), cons, protect);

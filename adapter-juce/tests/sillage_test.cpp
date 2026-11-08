@@ -182,6 +182,23 @@ int main (int argc, char** argv)
         waitFor (p, SillageProcessor::Phase::Ready, 60000);
     }
 
+    // 2c. Suggestion de force : le test a des décalages importants par endroits (voir la courbe de décalage) ; avec la sensibilité haute on obtient une courbe.
+    {
+        p.parameters().getParameter ("suggest")->setValueNotifyingHost (0.f); // haute (30 ms)
+        const int n = p.suggestStrength();
+        std::printf ("       suggestion : %d points\n", n);
+        check (n >= 2, "la suggestion pose une courbe de force");
+        const auto c = p.strengthCurve();
+        check ((int) c.size() == n, "la courbe suggérée est conservée par le plugin");
+        for (std::size_t i = 1; i < c.size(); ++i) if (! (c[i].time > c[i - 1].time)) { check (false, "les temps de la courbe croissent"); break; }
+        juce::MessageManager::getInstance()->runDispatchLoopUntil (800);
+        check (waitFor (p, SillageProcessor::Phase::Ready, 60000), "rendu refait avec la courbe suggérée");
+        p.setStrengthCurve ({});
+        p.parameters().getParameter ("suggest")->setValueNotifyingHost (0.5f);
+        juce::MessageManager::getInstance()->runDispatchLoopUntil (800);
+        waitFor (p, SillageProcessor::Phase::Ready, 60000);
+    }
+
     // 3. Réglage « Recalé » décoché : l'original.
     p.parameters().getParameter ("aligned")->setValueNotifyingHost (0.f);
     auto orig = run (p, host, dubOnTimeline, guideOnTimeline, 0, total);

@@ -7,6 +7,7 @@
 namespace
 {
 const double kMaxShifts[] = { 0.5, 1.0, 1.5, 2.0, 3.0 };
+const double kSuggestMs[] = { 30.0, 60.0, 100.0 };
 const double kCaptureSeconds[] = { 30.0, 60.0, 120.0, 180.0, 300.0 };
 constexpr std::uint32_t kMagic = 0x31474C53; // « SLG1 »
 constexpr int kFade = 220;                  // fondu aux bords de la zone rejouée (5 ms)
@@ -78,6 +79,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SillageProcessor::makeLayout
     l.add (std::make_unique<AudioParameterChoice> (ParameterID { "maxshift", 1 }, "Écart maximal"_fr, StringArray { "0,5 s", "1 s", "1,5 s", "2 s", "3 s" }, 2));
     l.add (std::make_unique<AudioParameterChoice> (ParameterID { "caplen", 1 }, "Durée de capture"_fr, StringArray { "30 s", "1 min", "2 min", "3 min", "5 min" }, 2));
     l.add (std::make_unique<AudioParameterBool> (ParameterID { "aligned", 1 }, "Recalé"_fr, true));
+    l.add (std::make_unique<AudioParameterChoice> (ParameterID { "suggest", 1 }, "Sensibilité de la suggestion"_fr, StringArray { "Haute (30 ms)", "Moyenne (60 ms)", "Basse (100 ms)" }, 1));
     return l;
 }
 
@@ -528,6 +530,27 @@ void SillageProcessor::setStrengthCurve (std::vector<align::StrengthPoint> c)
 {
     { std::lock_guard<std::mutex> lk (dataMutex_); curve_ = std::move (c); }
     requestRecompute (false);
+}
+
+int SillageProcessor::suggestStrength()
+{
+    std::shared_ptr<const align::Analysis> an;
+    {
+        std::lock_guard<std::mutex> lk (dataMutex_);
+        an = analysis_;
+    }
+    if (! an || phase() != Phase::Ready) return 0;
+    align::SuggestSettings ss;
+    ss.thresholdMs = kSuggestMs[std::clamp ((int) *apvts_.getRawParameterValue ("suggest"), 0, 2)];
+    auto curve = align::suggestStrengthCurve (*an, ss);
+    const int n = (int) curve.size();
+    {
+        std::lock_guard<std::mutex> lk (dataMutex_);
+        message_ = n > 0 ? "Force proposée : "_fr + juce::String (n) + " points. À ajuster à la souris."_fr
+                         : "Aucun passage ne dépasse le seuil : la force reste constante."_fr;
+    }
+    setStrengthCurve (std::move (curve));
+    return n;
 }
 
 std::vector<align::Segment> SillageProcessor::consonants() const
