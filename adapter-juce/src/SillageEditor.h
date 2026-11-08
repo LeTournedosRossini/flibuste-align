@@ -47,12 +47,13 @@ private:
     SillageLook look_;
     juce::TextButton capture_ { "Capturer" }, finish_ { "Terminer" }, clear_ { "Tout effacer" }, export_ { "Exporter le double recalé (WAV)..."_fr }, clearCurve_ { "Effacer la courbe de force" }, suggest_ { "Suggérer la force"_fr };
     juce::ToggleButton aligned_ { "Recalé"_fr };
-    juce::ComboBox engine_, maxShift_, capLen_, suggestSens_;
+    juce::ComboBox engine_, maxShift_, capLen_, suggestSens_, analysis_;
+    juce::TextEditor voiceName_;
     juce::Slider strength_, protect_, tightness_;
-    juce::Label suggestL_, engineL_, maxShiftL_, capLenL_, strengthL_, protectL_, tightnessL_, status_;
+    juce::Label analysisL_, voiceL_, suggestL_, engineL_, maxShiftL_, capLenL_, strengthL_, protectL_, tightnessL_, status_;
     SillageLanes lanes_;
     std::unique_ptr<juce::FileChooser> chooser_;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> engineA_, maxShiftA_, capLenA_, suggestA_;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> engineA_, maxShiftA_, capLenA_, suggestA_, analysisA_;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> strengthA_, protectA_, tightnessA_;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> alignedA_;
 };

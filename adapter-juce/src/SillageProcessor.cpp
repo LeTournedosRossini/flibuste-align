@@ -79,6 +79,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SillageProcessor::makeLayout
     l.add (std::make_unique<AudioParameterChoice> (ParameterID { "maxshift", 1 }, "Écart maximal"_fr, StringArray { "0,5 s", "1 s", "1,5 s", "2 s", "3 s" }, 2));
     l.add (std::make_unique<AudioParameterChoice> (ParameterID { "caplen", 1 }, "Durée de capture"_fr, StringArray { "30 s", "1 min", "2 min", "3 min", "5 min" }, 2));
     l.add (std::make_unique<AudioParameterBool> (ParameterID { "aligned", 1 }, "Recalé"_fr, true));
+    l.add (std::make_unique<AudioParameterChoice> (ParameterID { "analysis", 1 }, "Analyse"_fr, StringArray { "Même hauteur", "Harmonies" }, 0));
     l.add (std::make_unique<AudioParameterChoice> (ParameterID { "suggest", 1 }, "Sensibilité de la suggestion"_fr, StringArray { "Haute (30 ms)", "Moyenne (60 ms)", "Basse (100 ms)" }, 1));
     return l;
 }
@@ -86,7 +87,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SillageProcessor::makeLayout
 SillageProcessor::SillageProcessor()
     : juce::AudioProcessor (makeBuses()), apvts_ (*this, nullptr, "SILLAGE", makeLayout())
 {
-    for (const char* id : { "engine", "strength", "protect", "tightness", "maxshift" }) apvts_.addParameterListener (id, this);
+    for (const char* id : { "engine", "strength", "protect", "tightness", "maxshift", "analysis" }) apvts_.addParameterListener (id, this);
     startTimerHz (20);
 }
 
@@ -122,6 +123,10 @@ align::AlignSettings SillageProcessor::alignSettings() const
     return a;
 }
 
+namespace
+{
+}
+
 align::RenderSettings SillageProcessor::renderSettings() const
 {
     align::RenderSettings r;
@@ -136,7 +141,7 @@ align::RenderSettings SillageProcessor::renderSettings() const
 
 void SillageProcessor::parameterChanged (const juce::String& id, float)
 {
-    const int level = (id == "tightness" || id == "maxshift") ? 2 : 1;
+    const int level = (id == "tightness" || id == "maxshift" || id == "analysis") ? 2 : 1;
     int cur = dirty_.load();
     while (cur < level && ! dirty_.compare_exchange_weak (cur, level)) {}
     dirtySince_ = (std::int64_t) juce::Time::getMillisecondCounter();
@@ -286,6 +291,18 @@ bool SillageProcessor::canExport() const
     return phase() == Phase::Ready && result_ != nullptr;
 }
 
+juce::String SillageProcessor::voiceName() const
+{
+    std::lock_guard<std::mutex> lk (dataMutex_);
+    return voiceName_;
+}
+
+void SillageProcessor::setVoiceName (const juce::String& s)
+{
+    std::lock_guard<std::mutex> lk (dataMutex_);
+    voiceName_ = s.trim();
+}
+
 juce::String SillageProcessor::suggestedExportName() const
 {
     std::shared_ptr<const SillageResult> r;
@@ -293,10 +310,13 @@ juce::String SillageProcessor::suggestedExportName() const
         const juce::SpinLock::ScopedLockType lk (resultLock_);
         r = result_;
     }
-    if (! r) return "double-recale.wav";
+    juce::String prefix = voiceName().trim();
+    prefix = prefix.retainCharacters ("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 _-éèêàùçôîï").replaceCharacter (' ', '_');
+    prefix = prefix.isEmpty() ? juce::String ("double") : prefix;
+    if (! r) return prefix + "-recale.wav";
     const double s = (double) r->startSong / r->sampleRate;
     const int minutes = (int) (s / 60.0);
-    return "double-recale_a_" + juce::String (minutes) + "min" + juce::String (s - minutes * 60.0, 2) + "s.wav";
+    return prefix + "-recale_a_" + juce::String (minutes) + "min" + juce::String (s - minutes * 60.0, 2) + "s.wav";
 }
 
 bool SillageProcessor::exportAligned (const juce::File& file, juce::String& error)
@@ -360,11 +380,12 @@ void SillageProcessor::startJob (bool fullAlign)
     if (! fullAlign && ! prev) fullAlign = true;
     const auto as = alignSettings();
     const auto rs = renderSettings();
+    const auto an = *apvts_.getRawParameterValue ("analysis") > 0.5f ? align::harmonyAnalysis() : align::AnalysisSettings {};
     jobCaptureId_ = cap.get();
     jobRunning_ = true;
     jobDone_ = false;
     jobGeneration_ = ++generation_;
-    worker_ = std::thread ([this, cap, n, fullAlign, prev, as, rs]() {
+    worker_ = std::thread ([this, cap, n, fullAlign, prev, as, rs, an]() {
         auto analysis = prev;
         juce::String message;
         std::shared_ptr<SillageResult> result;
@@ -382,7 +403,7 @@ void SillageProcessor::startJob (bool fullAlign)
             else
             {
                 if (fullAlign)
-                    analysis = std::make_shared<align::Analysis> (align::analysePair (cap->guide.data(), n, dubMono.data(), n, cap->sampleRate, as));
+                    analysis = std::make_shared<align::Analysis> (align::analysePair (cap->guide.data(), n, dubMono.data(), n, cap->sampleRate, as, an));
                 auto rr = align::renderAnalysis (dub, *analysis, rs);
                 if (rr.fellBack) message = "Le moteur choisi a échoué : Signalsmith a été utilisé."_fr;
                 result = std::make_shared<SillageResult>();
@@ -590,6 +611,7 @@ void SillageProcessor::getStateInformation (juce::MemoryBlock& dest)
     }
     const bool hasData = phase() == Phase::Ready && cap && an;
     obj->setProperty ("hasData", hasData);
+    obj->setProperty ("voiceName", voiceName());
     juce::MemoryBlock dubFlac, guideFlac;
     if (hasData)
     {
@@ -637,6 +659,7 @@ void SillageProcessor::setStateInformation (const void* data, int size)
         if (auto xml = juce::XmlDocument::parse (root["params"].toString()))
             apvts_.replaceState (juce::ValueTree::fromXml (*xml));
     dirty_ = 0;
+    setVoiceName (root["voiceName"].toString());
     {
         std::vector<align::StrengthPoint> pts;
         if (auto* a = root["curve"].getArray())

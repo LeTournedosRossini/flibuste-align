@@ -98,6 +98,9 @@ public:
     void setStrengthCurve (std::vector<align::StrengthPoint>);
     // Pose une courbe de force proposée d'après les passages très décalés (sensibilité = réglage « suggest »). Rend le nombre de points posés (0 : rien à proposer).
     int suggestStrength();
+    // Nom de la voix (« voix 2 », « tierce »...) : préfixe du fichier exporté ; sauvegardé avec le projet.
+    juce::String voiceName() const;
+    void setVoiceName (const juce::String&);
     std::vector<align::Segment> consonants() const;
     void setConsonants (std::vector<align::Segment>);
 
@@ -134,6 +137,7 @@ private:
     std::vector<align::StrengthPoint> curve_;
     std::shared_ptr<const SillageDisplay> display_;
     juce::String message_;
+    juce::String voiceName_;
 
     // travail en arrière-plan
     std::thread worker_;

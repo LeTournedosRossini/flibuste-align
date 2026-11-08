@@ -279,17 +279,22 @@ SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor 
 {
     applyTheme (look_.theme());
     setLookAndFeel (&look_);
-    setSize (980, 680);
+    setSize (980, 720);
     setResizable (true, true);
-    setResizeLimits (760, 560, 1800, 1100);
+    setResizeLimits (760, 600, 1800, 1100);
     auto& ap = p.parameters();
 
     engine_.addItemList ({ "Signalsmith", "Rubber Band R2", "Rubber Band R3" }, 1);
     maxShift_.addItemList ({ "0,5 s", "1 s", "1,5 s", "2 s", "3 s" }, 1);
     capLen_.addItemList ({ "30 s", "1 min", "2 min", "3 min", "5 min" }, 1);
     suggestSens_.addItemList ({ "Haute (30 ms)", "Moyenne (60 ms)", "Basse (100 ms)" }, 1);
-    for (auto* c : { &engine_, &maxShift_, &capLen_, &suggestSens_ }) addAndMakeVisible (*c);
-    const std::pair<juce::Label*, juce::String> labels[] = { { &engineL_, juce::String ("Moteur") }, { &maxShiftL_, "Écart maximal"_fr }, { &capLenL_, "Durée de capture"_fr }, { &suggestL_, "Sensibilité"_fr } };
+    analysis_.addItemList ({ "Même hauteur", "Harmonies" }, 1);
+    for (auto* c : { &engine_, &maxShift_, &capLen_, &suggestSens_, &analysis_ }) addAndMakeVisible (*c);
+    voiceName_.setText (proc_.voiceName(), false);
+    voiceName_.setTextToShowWhenEmpty ("ex. voix 2, tierce"_fr, kDim);
+    voiceName_.onTextChange = [this] { proc_.setVoiceName (voiceName_.getText()); };
+    addAndMakeVisible (voiceName_);
+    const std::pair<juce::Label*, juce::String> labels[] = { { &engineL_, juce::String ("Moteur") }, { &maxShiftL_, "Écart maximal"_fr }, { &capLenL_, "Durée de capture"_fr }, { &suggestL_, "Sensibilité"_fr }, { &analysisL_, "Analyse"_fr }, { &voiceL_, "Nom de la voix"_fr } };
     for (auto& [l, t] : labels) { l->setText (t, juce::dontSendNotification); l->setColour (juce::Label::textColourId, kText); addAndMakeVisible (*l); }
     setupSlider (strength_, strengthL_, "Force", *this);
     setupSlider (protect_, protectL_, "Consonnes protégées"_fr, *this);
@@ -308,6 +313,7 @@ SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor 
     protectA_ = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (ap, "protect", protect_);
     tightnessA_ = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (ap, "tightness", tightness_);
     suggestA_ = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (ap, "suggest", suggestSens_);
+    analysisA_ = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (ap, "analysis", analysis_);
     alignedA_ = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment> (ap, "aligned", aligned_);
 
     capture_.onClick = [this] { proc_.armCapture(); };
@@ -356,10 +362,10 @@ void SillageEditor::resized()
     r.removeFromTop (6);
     status_.setBounds (r.removeFromTop (24));
     r.removeFromTop (6);
-    auto controls = r.removeFromBottom (92);
+    auto controls = r.removeFromBottom (124);
     lanes_.setBounds (r);
     controls.removeFromTop (8);
-    auto row1 = controls.removeFromTop (30), row2 = controls.removeFromTop (30);
+    auto row1 = controls.removeFromTop (30), row2 = controls.removeFromTop (30), row3 = controls.removeFromTop (30);
     auto place = [] (juce::Rectangle<int>& row, juce::Label& l, juce::Component& c, int labelW, int w) {
         l.setBounds (row.removeFromLeft (labelW));
         c.setBounds (row.removeFromLeft (w));
@@ -372,6 +378,8 @@ void SillageEditor::resized()
     place (row2, engineL_, engine_, 56, third - 70);
     place (row2, maxShiftL_, maxShift_, 100, third - 114);
     place (row2, capLenL_, capLen_, 120, third - 134);
+    place (row3, analysisL_, analysis_, 56, third - 70);
+    place (row3, voiceL_, voiceName_, 100, third - 114);
 }
 
 void SillageEditor::timerCallback()

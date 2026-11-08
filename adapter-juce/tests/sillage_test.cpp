@@ -158,6 +158,9 @@ int main (int argc, char** argv)
             check (mx < 1e-5, "le WAV exporté est ce qu'on entend dans la zone");
         }
         check (p.suggestedExportName().endsWith (".wav"), "nom de fichier proposé");
+        p.setVoiceName ("voix 3 / tierce");
+        check (p.suggestedExportName().startsWith ("voix_3__tierce-recale_a_") || p.suggestedExportName().startsWith ("voix_3_tierce-recale_a_"), "le nom de la voix préfixe le fichier exporté");
+        p.setVoiceName ({});
         tmp.deleteFile();
     }
 

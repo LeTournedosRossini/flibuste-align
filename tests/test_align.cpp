@@ -175,3 +175,26 @@ TEST_CASE ("force variable : phrase calée à fond, le reste presque tel quel")
     for (size_t i = 1; i < r.size(); ++i) CHECK (r[i] >= r[i - 1]); // la courbe reste croissante
     CHECK (align::applyStrength (path, 0.005, std::vector<align::StrengthPoint> {}) == path);
 }
+
+TEST_CASE ("harmonies : même paroles à une autre hauteur, l'analyse « harmonies » reste précise")
+{
+    const double ratios[] = { 1.26, 1.5, 2.0, 0.5, 0.75 };
+    for (double r : ratios)
+    {
+        double sum = 0;
+        int n = 0, bad = 0;
+        for (uint32_t seed : { 1u, 2u, 3u })
+        {
+            const auto p = synth::makePair (seed, 0.10, 0, 18, r);
+            const auto path = align::alignSignals (p.guide.audio.data(), p.guide.audio.size(), p.dub.audio.data(), p.dub.audio.size(), 44100.0, {}, align::harmonyAnalysis());
+            for (std::size_t k = 0; k < p.truth.points.size(); k += 2)
+            {
+                const double e = std::fabs (path[std::min ((std::size_t) (p.truth.points[k].first / 0.005), path.size() - 1)] - p.truth.points[k].second) * 1000.0;
+                sum += e; ++n; if (e > 30.0) ++bad;
+            }
+        }
+        std::printf ("harmonie x%.2f : début de note %.1f ms, %d mauvais sur %d\n", r, sum / n, bad, n);
+        CHECK (sum / n < 8.0);
+        CHECK (bad == 0);
+    }
+}

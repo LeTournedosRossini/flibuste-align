@@ -32,6 +32,17 @@ struct AnalysisSettings
     double chromaWindowSeconds = 0.060; // fenêtre plus longue : il faut séparer deux notes voisines dans le grave
 };
 
+// Réglage pour les HARMONIES (mêmes paroles chantées à une autre hauteur : tierce, quinte, octave...). Avec peu de coefficients et des bandes plus larges, l'analyse
+// décrit les voyelles et non la hauteur ; sur voix synthétiques, l'erreur reste à 3 ms pour tous les intervalles essayés (le réglage par défaut se trompe parfois
+// d'une note entière à la quinte ou à l'octave).
+inline AnalysisSettings harmonyAnalysis()
+{
+    AnalysisSettings s;
+    s.coefficients = 6;
+    s.bands = 20;
+    return s;
+}
+
 // `x` : signal mono. Pour de la stéréo, l'appelant fait la somme (ou la voie la plus forte).
 Features analyse (const float* x, size_t n, double sampleRate, const AnalysisSettings& s = {});
 

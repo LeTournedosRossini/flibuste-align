@@ -1,6 +1,6 @@
 // flibuste-align : cale un double sur un guide.
 //   align_cli guide.wav double.wav sortie.wav [--engine signalsmith|r2|r3] [--protect 0..1] [--tightness 0..1]
-//                                             [--max-shift secondes] [--chroma poids] [--strength 0..1 | --strength-points t:force,t:force,... | --suggest-strength ms] [--open-ends] [--write-consonants fichier.txt]
+//                                             [--max-shift secondes] [--chroma poids] [--harmony] [--strength 0..1 | --strength-points t:force,t:force,... | --suggest-strength ms] [--open-ends] [--write-consonants fichier.txt]
 // Le résultat a la durée et la fréquence d'échantillonnage du guide (les deux fichiers doivent avoir la même fréquence).
 #include <algorithm>
 #include <chrono>
@@ -96,6 +96,7 @@ int main (int argc, char** argv)
                 pos = end + 1;
             }
         }
+        else if (a == "--harmony") { const double c = an.chromaWeight; an = align::harmonyAnalysis(); an.chromaWeight = c; }
         else if (a == "--chroma") an.chromaWeight = std::atof (next());
         else if (a == "--open-ends") as.openEnds = true;
         else if (a == "--write-consonants") consFile = next();

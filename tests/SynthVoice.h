@@ -105,7 +105,7 @@ struct Truth
 struct Pair { Take guide, dub; Truth truth; };
 
 // Le double chante les mêmes notes avec des écarts : début décalé de ±maxOffset, durée changée de ±30 %.
-inline Pair makePair (uint32_t seed, double maxOffset = 0.10, double totalSeconds = 0, int count = 18)
+inline Pair makePair (uint32_t seed, double maxOffset = 0.10, double totalSeconds = 0, int count = 18, double dubPitchRatio = 1.0)
 {
     std::mt19937 rng (seed);
     auto g = melody (rng, count);
@@ -119,7 +119,7 @@ inline Pair makePair (uint32_t seed, double maxOffset = 0.10, double totalSecond
         d[i].length = g[i].length * (1.0 + 0.3 * u (rng));
         if (i > 0) d[i].start = std::max (d[i].start, d[i - 1].start + d[i - 1].length + 0.04);
         carry = 0.5 * (d[i].start - g[i].start); // le décalage dérive lentement, comme un chanteur qui traîne
-        d[i].f0 = g[i].f0;
+        d[i].f0 = g[i].f0 * dubPitchRatio; // 1 : même hauteur ; autre rapport : une harmonie (mêmes paroles, autre hauteur)
         p.truth.points.push_back ({ g[i].start, d[i].start });
         p.truth.points.push_back ({ g[i].start + g[i].length, d[i].start + d[i].length });
     }
