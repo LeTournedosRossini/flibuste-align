@@ -38,6 +38,7 @@ Features analyse (const float* x, size_t n, double sampleRate, const AnalysisSet
 struct AlignSettings
 {
     double maxShiftSeconds = 1.5;   // écart maximal entre guide et double, de part et d'autre de la diagonale
+    double maxSlope = 2.0;          // vitesse maximale du double par rapport au guide, dans un sens comme dans l'autre (2 ou 3)
     double slopePenalty = 0.35;     // coût d'un pas qui n'est pas à vitesse normale : plus grand = chemin plus droit
     double tightness = 0.95;         // 0 = très lissé (suit à peine), 1 = serre le guide image par image
     bool openEnds = false;          // vrai : le double peut commencer / finir à un autre endroit que le guide (la bande suit alors la diagonale)

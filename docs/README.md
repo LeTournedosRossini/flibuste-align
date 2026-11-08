@@ -22,6 +22,8 @@ Mesures sur 8 doublures synthétiques : calage Signalsmith 3,9 ms, R2 5,2 ms, R3
 Alignement 7,4 s, mémoire 290 Mo ; rendu Signalsmith 2,9 s, R2 4,7 s, R3 17,7 s. Erreur moyenne ~14 ms sur 120 notes enchaînées avec des décalages indépendants de ±100 ms à chaque note (cas plus dur que des doublures réelles) : les écarts de pause très différents sont limités par la pente maximale (×0,5 à ×2). Les traits de hauteur (`chromaWeight`) n'ont pas amélioré ces mesures : désactivés par défaut.
 Double qui commence 0,8 s en retard (bouts libres) : erreur moyenne 19 ms sur le même morceau.
 
+Autre piste écartée : élargir la pente maximale à ×3 (`maxSlope`) n'améliore pas non plus (12,3 ms contre 13,5 ms). Les erreurs de ce test viennent surtout des notes SANS consonne (19 % de mauvaises contre 9 % avec) : leur attaque est un fondu de 30 ms dont le début exact est flou, donc une partie de l'« erreur » est dans la mesure, pas dans l'algorithme. À juger sur de vraies prises.
+
 ## Outil en ligne de commande
 `align_cli guide.wav double.wav sortie.wav [--engine signalsmith|r2|r3] [--protect 0..1] [--tightness 0..1] [--max-shift s] [--chroma poids] [--open-ends] [--write-consonants f.txt]` : lit du WAV mono ou stéréo (même fréquence pour les deux), écrit un WAV 32 bits flottant de la durée du guide, et affiche décalage, vitesse et temps de calcul.
 

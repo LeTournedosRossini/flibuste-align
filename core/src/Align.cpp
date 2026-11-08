@@ -213,7 +213,8 @@ std::vector<double> alignPath (const Features& g, const Features& d, const Align
     // Pas : (di, dj) = (1,1) diagonal, (1,2) double plus rapide, (2,1) double plus lent. Poids = moyenne de di et dj.
     struct Step { int di, dj; float w, pen; };
     const float pen = (float) s.slopePenalty;
-    const Step steps[3] = { { 1, 1, 1.0f, 0.f }, { 1, 2, 1.5f, pen }, { 2, 1, 1.5f, pen } };
+    const Step steps[5] = { { 1, 1, 1.0f, 0.f }, { 1, 2, 1.5f, pen }, { 2, 1, 1.5f, pen }, { 1, 3, 2.0f, 2.f * pen }, { 3, 1, 2.0f, 2.f * pen } };
+    const int nSteps = s.maxSlope >= 3.0 ? 5 : 3;
 
     // Départ : fermé = (0,0) ; ouvert = toute la bande de la première ligne.
     for (int j = std::max (0, centre (0) - W); j <= std::min (M - 1, centre (0) + W); ++j)
@@ -227,7 +228,7 @@ std::vector<double> alignPath (const Features& g, const Features& d, const Align
             const float dij = dist (i, j);
             float best = kInf;
             uint8_t arg = 0;
-            for (int si = 0; si < 3; ++si)
+            for (int si = 0; si < nSteps; ++si)
             {
                 const long p = (i - steps[si].di >= 0 && j - steps[si].dj >= 0) ? at (i - steps[si].di, j - steps[si].dj) : -1;
                 if (p < 0 || cost[(size_t) p] == kInf) continue;
