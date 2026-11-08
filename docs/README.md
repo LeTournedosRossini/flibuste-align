@@ -27,6 +27,9 @@ Autre piste écartée : élargir la pente maximale à ×3 (`maxSlope`) n'amélio
 ## Outil en ligne de commande
 `align_cli guide.wav double.wav sortie.wav [--engine signalsmith|r2|r3] [--protect 0..1] [--tightness 0..1] [--max-shift s] [--chroma poids] [--open-ends] [--write-consonants f.txt]` : lit du WAV mono ou stéréo (même fréquence pour les deux), écrit un WAV 32 bits flottant de la durée du guide, et affiche décalage, vitesse et temps de calcul.
 
+## Premier essai sur de vraies voix chantées (2026-11-08)
+Deux prises de 30 s (voix chantées, avec par endroits de gros décalages). Verdict de Jean à l'oreille : Signalsmith « quasiment parfait, presque trop » et sans passage qui sonne faux ; Rubber Band R3 « un peu bizarre ». Décision : Signalsmith par défaut, R2/R3 gardés en option. Réglage de force ajouté (`applyStrength`, `--strength 0..1`).
+
 ## À faire
 - Écouter sur de vraies prises (voix, guitare), choisir l'étireur (ou les deux, au choix de l'utilisateur).
 - Étirer moins les consonnes (ancrer les attaques), réglage « souffle / silences ».

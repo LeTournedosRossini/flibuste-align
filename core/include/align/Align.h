@@ -67,6 +67,10 @@ struct ConsonantSettings
 };
 std::vector<Segment> findConsonants (const float* x, size_t n, double sampleRate, const ConsonantSettings& s = {});
 
+// Force du recalage : 0 = le double reste tel quel (aucun décalage), 1 = calé complètement, entre les deux = une part du décalage trouvé.
+// Agit sur le chemin, avant la carte de correspondance. Le décalage est l'écart entre la position trouvée et le temps du guide.
+std::vector<double> applyStrength (const std::vector<double>& pathSeconds, double hopSeconds, double strength);
+
 // Courbe de correspondance en échantillons : pour chaque échantillon de sortie (temps du guide), l'échantillon source du double.
 // Sert aux étireurs. `hop` en secondes est celui de `path`.
 struct WarpMap

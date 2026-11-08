@@ -1,6 +1,6 @@
 // flibuste-align : cale un double sur un guide.
 //   align_cli guide.wav double.wav sortie.wav [--engine signalsmith|r2|r3] [--protect 0..1] [--tightness 0..1]
-//                                             [--max-shift secondes] [--chroma poids] [--open-ends] [--write-consonants fichier.txt]
+//                                             [--max-shift secondes] [--chroma poids] [--strength 0..1] [--open-ends] [--write-consonants fichier.txt]
 // Le résultat a la durée et la fréquence d'échantillonnage du guide (les deux fichiers doivent avoir la même fréquence).
 #include <algorithm>
 #include <chrono>
@@ -62,7 +62,7 @@ int main (int argc, char** argv)
     if (argc < 4) { std::fprintf (stderr, "usage : align_cli guide.wav double.wav sortie.wav [--engine signalsmith|r2|r3] [--protect 0..1] [--tightness 0..1] [--max-shift s] [--open-ends] [--write-consonants f.txt]\n"); return 2; }
     align::Engine engine = align::Engine::Signalsmith;
     align::AlignSettings as;
-    double protect = 0.0;
+    double protect = 0.0, strength = 1.0;
     align::AnalysisSettings an;
     const char* consFile = nullptr;
     for (int i = 4; i < argc; ++i)
@@ -77,6 +77,7 @@ int main (int argc, char** argv)
         else if (a == "--protect") protect = std::atof (next());
         else if (a == "--tightness") as.tightness = std::atof (next());
         else if (a == "--max-shift") as.maxShiftSeconds = std::atof (next());
+        else if (a == "--strength") strength = std::atof (next());
         else if (a == "--chroma") an.chromaWeight = std::atof (next());
         else if (a == "--open-ends") as.openEnds = true;
         else if (a == "--write-consonants") consFile = next();
@@ -89,7 +90,8 @@ int main (int argc, char** argv)
     const double sr = guide.rate;
     const auto t0 = std::chrono::steady_clock::now();
     const auto g = mono (guide), d = mono (dub);
-    const auto path = align::alignSignals (g.data(), g.size(), d.data(), d.size(), sr, as, an);
+    const auto found = align::alignSignals (g.data(), g.size(), d.data(), d.size(), sr, as, an);
+    const auto path = align::applyStrength (found, 0.005, strength);
     const auto cons = align::findConsonants (d.data(), d.size(), sr);
     const auto map = align::makeWarpMap (path, 0.005, sr, g.size(), cons, protect);
     const auto r = align::render (dub.ch, map, sr, engine);
@@ -107,8 +109,8 @@ int main (int argc, char** argv)
         const double rate = (path[i + 20] - path[i - 20]) / (40 * 0.005);
         minRate = std::min (minRate, rate); maxRate = std::max (maxRate, rate);
     }
-    std::printf ("moteur %s%s | décalage du double de %+.0f à %+.0f ms | vitesse de %.2f à %.2f | %zu consonnes protégées à %.0f %% | %.1f s de calcul\n",
-                 align::engineName (r.engineUsed), r.fellBack ? " (repli)" : "", minShift * 1000, maxShift * 1000, minRate, maxRate, cons.size(), protect * 100, secs);
+    std::printf ("force %.0f %% | moteur %s%s | décalage du double de %+.0f à %+.0f ms | vitesse de %.2f à %.2f | %zu consonnes protégées à %.0f %% | %.1f s de calcul\n",
+                 strength * 100, align::engineName (r.engineUsed), r.fellBack ? " (repli)" : "", minShift * 1000, maxShift * 1000, minRate, maxRate, cons.size(), protect * 100, secs);
     if (consFile)
         if (FILE* f = std::fopen (consFile, "w")) { for (const auto& s : cons) std::fprintf (f, "%.4f\t%.4f\n", s.start, s.end); std::fclose (f); }
     Audio out;

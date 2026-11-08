@@ -148,3 +148,16 @@ TEST_CASE ("carte protégée : la consonne garde sa durée, protect = 0 ne chang
     CHECK (checked > 20);
     CHECK (ok >= checked * 0.85);
 }
+
+TEST_CASE ("force du recalage : 0 laisse le double, 1 garde le chemin, 0,5 est au milieu")
+{
+    const std::vector<double> path { 0.02, 0.07, 0.14, 0.17 }; // temps du guide : 0, 5, 10, 15 ms
+    const auto none = align::applyStrength (path, 0.005, 0.0), full = align::applyStrength (path, 0.005, 1.0), half = align::applyStrength (path, 0.005, 0.5);
+    for (size_t i = 0; i < path.size(); ++i)
+    {
+        CHECK (none[i] == Catch::Approx ((double) i * 0.005));
+        CHECK (full[i] == Catch::Approx (path[i]));
+        CHECK (half[i] == Catch::Approx (0.5 * ((double) i * 0.005 + path[i])));
+    }
+    CHECK (align::applyStrength (path, 0.005, 7.0)[2] == Catch::Approx (path[2])); // borné à 1
+}

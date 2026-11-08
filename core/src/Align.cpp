@@ -297,6 +297,18 @@ std::vector<double> alignPath (const Features& g, const Features& d, const Align
     return out;
 }
 
+std::vector<double> applyStrength (const std::vector<double>& p, double hop, double strength)
+{
+    strength = std::clamp (strength, 0.0, 1.0);
+    std::vector<double> out (p.size());
+    for (size_t i = 0; i < p.size(); ++i)
+    {
+        const double t = (double) i * hop;
+        out[i] = t + strength * (p[i] - t);
+    }
+    return out;
+}
+
 std::vector<double> alignSignals (const float* guide, size_t nGuide, const float* dub, size_t nDub, double sr,
                                   const AlignSettings& a, const AnalysisSettings& an)
 {
