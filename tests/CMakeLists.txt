@@ -1,0 +1,5 @@
+add_executable(align_core_tests test_align.cpp test_render.cpp)
+target_link_libraries(align_core_tests PRIVATE align_render Catch2::Catch2WithMain)
+include(CTest)
+include(Catch)
+catch_discover_tests(align_core_tests)
