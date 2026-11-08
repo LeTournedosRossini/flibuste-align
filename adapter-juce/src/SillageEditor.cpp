@@ -289,7 +289,7 @@ SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor 
     setupSlider (protect_, protectL_, "Consonnes protégées"_fr, *this);
     setupSlider (tightness_, tightnessL_, "Serrage", *this);
     addAndMakeVisible (aligned_);
-    for (auto* b : { &capture_, &finish_, &clear_, &clearCurve_ }) addAndMakeVisible (*b);
+    for (auto* b : { &capture_, &finish_, &clear_, &export_, &clearCurve_ }) addAndMakeVisible (*b);
     status_.setColour (juce::Label::textColourId, kText);
     status_.setFont (juce::Font (juce::FontOptions (15.f)));
     addAndMakeVisible (status_);
@@ -306,6 +306,16 @@ SillageEditor::SillageEditor (SillageProcessor& p) : juce::AudioProcessorEditor 
     capture_.onClick = [this] { proc_.armCapture(); };
     finish_.onClick = [this] { proc_.finishCapture(); };
     clear_.onClick = [this] { proc_.clearAll(); };
+    export_.onClick = [this] {
+        chooser_ = std::make_unique<juce::FileChooser> ("Exporter le double recalé"_fr, juce::File::getSpecialLocation (juce::File::userDocumentsDirectory).getChildFile (proc_.suggestedExportName()), "*.wav");
+        chooser_->launchAsync (juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles | juce::FileBrowserComponent::warnAboutOverwriting,
+                               [this] (const juce::FileChooser& fc) {
+                                   const auto f = fc.getResult();
+                                   if (f == juce::File()) return;
+                                   juce::String err;
+                                   if (! proc_.exportAligned (f, err)) juce::AlertWindow::showMessageBoxAsync (juce::MessageBoxIconType::WarningIcon, "Export", err);
+                               });
+    };
     clearCurve_.onClick = [this] { proc_.setStrengthCurve ({}); };
     startTimerHz (15);
 }
@@ -322,10 +332,12 @@ void SillageEditor::resized()
     top.removeFromLeft (8);
     finish_.setBounds (top.removeFromLeft (110));
     top.removeFromLeft (8);
-    clear_.setBounds (top.removeFromLeft (120));
-    top.removeFromLeft (16);
-    aligned_.setBounds (top.removeFromLeft (300));
-    clearCurve_.setBounds (top.removeFromRight (200));
+    clear_.setBounds (top.removeFromLeft (110));
+    top.removeFromLeft (8);
+    export_.setBounds (top.removeFromLeft (230));
+    clearCurve_.setBounds (top.removeFromRight (190));
+    top.removeFromRight (8);
+    aligned_.setBounds (top);
     r.removeFromTop (6);
     status_.setBounds (r.removeFromTop (24));
     r.removeFromTop (6);
@@ -354,5 +366,6 @@ void SillageEditor::timerCallback()
     capture_.setEnabled (ph != SillageProcessor::Phase::Capturing && ph != SillageProcessor::Phase::Computing);
     finish_.setEnabled (ph == SillageProcessor::Phase::Capturing || ph == SillageProcessor::Phase::Armed);
     clear_.setEnabled (ph != SillageProcessor::Phase::Idle);
+    export_.setEnabled (proc_.canExport());
     lanes_.repaint();
 }

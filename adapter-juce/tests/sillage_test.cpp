@@ -137,6 +137,30 @@ int main (int argc, char** argv)
     for (std::size_t i = (std::size_t) songStart + N + 10; i < total; ++i) after = std::max (after, (double) std::fabs (played[i] - dubOnTimeline[i]));
     check (after == 0.0, "après la zone capturée, le double est inchangé");
 
+    // 2a. Export : le WAV contient le double recalé, à la position de la capture.
+    {
+        const auto tmp = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("sillage_export_test.wav");
+        juce::String err;
+        check (p.canExport(), "export possible");
+        check (p.exportAligned (tmp, err), "export écrit");
+        juce::WavAudioFormat wav;
+        std::unique_ptr<juce::AudioFormatReader> rd (wav.createReaderFor (tmp.createInputStream().release(), true));
+        check (rd != nullptr && (std::size_t) rd->lengthInSamples == N, "le WAV exporté a la durée du guide");
+        if (rd)
+        {
+            check (rd->metadataValues[juce::WavAudioFormat::bwavTimeReference].getLargeIntValue() == songStart, "la position de la capture est écrite dans le WAV (BWF)");
+            std::vector<float> ex ((std::size_t) rd->lengthInSamples);
+            float* dst[1] = { ex.data() };
+            rd->read (dst, 1, 0, (int) rd->lengthInSamples);
+            double mx = 0;
+            for (std::size_t i = 400; i + 400 < N; ++i) mx = std::max (mx, (double) std::fabs (ex[i] - played[(std::size_t) songStart + i]));
+            std::printf ("       écart WAV exporté / lecture : %.2e\n", mx);
+            check (mx < 1e-5, "le WAV exporté est ce qu'on entend dans la zone");
+        }
+        check (p.suggestedExportName().endsWith (".wav"), "nom de fichier proposé");
+        tmp.deleteFile();
+    }
+
     // 2b. Image de l'interface (si un chemin est donné) : avec une courbe de force variable posée.
     if (argc > 1)
     {

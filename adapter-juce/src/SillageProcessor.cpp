@@ -277,6 +277,58 @@ void SillageProcessor::clearAll()
     message_ = {};
 }
 
+// ------------------------------------------------------------------------------------------------------------ export
+bool SillageProcessor::canExport() const
+{
+    const juce::SpinLock::ScopedLockType lk (resultLock_);
+    return phase() == Phase::Ready && result_ != nullptr;
+}
+
+juce::String SillageProcessor::suggestedExportName() const
+{
+    std::shared_ptr<const SillageResult> r;
+    {
+        const juce::SpinLock::ScopedLockType lk (resultLock_);
+        r = result_;
+    }
+    if (! r) return "double-recale.wav";
+    const double s = (double) r->startSong / r->sampleRate;
+    const int minutes = (int) (s / 60.0);
+    return "double-recale_a_" + juce::String (minutes) + "min" + juce::String (s - minutes * 60.0, 2) + "s.wav";
+}
+
+bool SillageProcessor::exportAligned (const juce::File& file, juce::String& error)
+{
+    std::shared_ptr<const SillageResult> r;
+    {
+        const juce::SpinLock::ScopedLockType lk (resultLock_);
+        r = result_;
+    }
+    if (! r || r->aligned.empty()) { error = "Rien à exporter : faites d'abord une capture."_fr; return false; }
+    auto target = file.hasFileExtension ("wav") ? file : file.withFileExtension ("wav");
+    target.deleteFile();
+    auto os = std::make_unique<juce::FileOutputStream> (target);
+    if (! os->openedOk()) { error = "Impossible d'écrire le fichier : "_fr + target.getFullPathName(); return false; }
+    juce::StringPairArray meta;
+    meta.set (juce::WavAudioFormat::bwavDescription, "Sillage : double recalé sur le guide");
+    meta.set (juce::WavAudioFormat::bwavOriginator, "Sillage");
+    meta.set (juce::WavAudioFormat::bwavTimeReference, juce::String ((juce::int64) r->startSong)); // position de la capture dans le morceau, en échantillons
+    juce::WavAudioFormat wav;
+    std::unique_ptr<juce::AudioFormatWriter> writer (wav.createWriterFor (os.get(), r->sampleRate, (unsigned) r->aligned.size(), 24, meta, 0));
+    if (! writer) { error = "Le format du fichier n'a pas pu être créé."_fr; return false; }
+    os.release(); // le flux appartient à l'écrivain
+    std::vector<const float*> p;
+    for (const auto& c : r->aligned) p.push_back (c.data());
+    const bool ok = writer->writeFromFloatArrays (p.data(), (int) p.size(), (int) r->length);
+    writer.reset();
+    if (! ok) { error = "L'écriture du fichier a échoué."_fr; return false; }
+    {
+        std::lock_guard<std::mutex> lk (dataMutex_);
+        message_ = "Exporté : "_fr + target.getFileName() + " (commence à "_fr + juce::String ((double) r->startSong / r->sampleRate, 2) + " s dans le morceau)"_fr;
+    }
+    return true;
+}
+
 // ------------------------------------------------------------------------------------------------ calcul en arrière-plan
 void SillageProcessor::requestRecompute (bool fullAlign)
 {

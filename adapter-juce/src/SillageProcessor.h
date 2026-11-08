@@ -79,6 +79,11 @@ public:
     void armCapture();            // prépare l'enregistrement ; il démarre à la prochaine lecture
     void finishCapture();         // arrête la capture en cours et lance le calcul
     void clearAll();              // oublie capture et résultat
+    // « Acter » : écrit le double recalé (tel qu'on l'entend, réglages actuels) dans un WAV 24 bits à placer sur la timeline comme nouvelle prise.
+    // Le fichier commence à la position de la capture ; cette position est aussi écrite dans le WAV (horodatage BWF).
+    bool exportAligned (const juce::File&, juce::String& error);
+    juce::String suggestedExportName() const;
+    bool canExport() const;
     juce::AudioProcessorValueTreeState& parameters() { return apvts_; }
 
     // --- état affiché
@@ -118,7 +123,7 @@ private:
     std::atomic<bool> playheadKnown_ { false };
 
     // résultat rejoué par l'audio
-    juce::SpinLock resultLock_;
+    mutable juce::SpinLock resultLock_;
     std::shared_ptr<const SillageResult> result_;
 
     // analyse conservée (fil de messages)
