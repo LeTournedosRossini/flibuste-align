@@ -97,6 +97,29 @@ int main (int argc, char** argv)
     CHECK (align_settings_merge_general (align_settings_default_json(), "{\"general\":{\"engine\":\"rubberband_r2\"}}", &merged) == ALIGN_OK && strstr (merged, "rubberband_r2") != NULL,
            "fusion des réglages généraux");
 
+    /* Étirement par marqueurs : le double étiré par tronçons (x0,8 puis x1,25), longueur exacte, deux rendus identiques, rapport hors limites refusé. */
+    {
+        const double src = (double) dn / (double) dr;
+        const double keys[6] = { 0.0, 0.0, src * 0.5, src * 0.5 * 0.8, src, src * 0.5 * 0.8 + src * 0.5 * 1.25 };
+        float *w1 = NULL, *w2 = NULL;
+        size_t n1 = 0, n2 = 0;
+        const char* r2 = "{\"general\":{\"engine\":\"rubberband_r2\"}}";
+        CHECK (align_warp_render (dub, dn, (int) dc, (double) dr, keys, 3, NULL, NULL, NULL, &w1, &n1, NULL) == ALIGN_OK
+               && n1 == (size_t) (keys[5] * (double) dr + 0.5), "étirement par marqueurs : longueur exacte (Signalsmith)");
+        CHECK (align_warp_render (dub, dn, (int) dc, (double) dr, keys, 3, NULL, NULL, NULL, &w2, &n2, NULL) == ALIGN_OK && n2 == n1 && memcmp (w1, w2, n1 * sizeof (float) * dc) == 0,
+               "étirement par marqueurs : deux rendus identiques");
+        align_free (w1); align_free (w2); w1 = w2 = NULL;
+        CHECK (align_warp_render (dub, dn, (int) dc, (double) dr, keys, 3, r2, NULL, NULL, &w1, &n1, NULL) == ALIGN_OK
+               && align_warp_render (dub, dn, (int) dc, (double) dr, keys, 3, r2, NULL, NULL, &w2, &n2, NULL) == ALIGN_OK && memcmp (w1, w2, n1 * sizeof (float) * dc) == 0,
+               "étirement par marqueurs : deux rendus identiques (Rubber Band R2)");
+        align_free (w1); align_free (w2); w1 = NULL;
+        {
+            const double bad[4] = { 0.0, 0.0, src, src * 5.0 };
+            CHECK (align_warp_render (dub, dn, (int) dc, (double) dr, bad, 2, NULL, NULL, NULL, &w1, &n1, NULL) == ALIGN_ERR_ARGUMENT && w1 == NULL,
+                   "étirement par marqueurs : rapport hors de [0,25 ; 4] refusé");
+        }
+    }
+
     align_free (merged); align_free (out); align_free (out2); align_free (bytes);
     align_analysis_free (a); align_analysis_free (back); align_guide_free (g);
     drwav_free (guide, NULL); drwav_free (dub, NULL);
