@@ -1,6 +1,6 @@
 # flibuste-align — caler une doublure sur un guide
 
-Projet de la Flibuste Suite (GPLv3). Équivalent libre d'un outil de type VocAlign : on donne un **guide** et un **double**, on rend le double recalé sur le guide, sans changer sa hauteur.
+Projet de la Flibuste Suite (GPLv3 ou ultérieure ; le plugin Sillage, qui utilise JUCE, est sous AGPLv3 ou ultérieure : voir `adapter-juce/LICENSE.md`). Équivalent libre d'un outil de type VocAlign : on donne un **guide** et un **double**, on rend le double recalé sur le guide, sans changer sa hauteur.
 
 ## État (2026-11-08)
 - `core/` : `align::analyse` (coefficients cepstraux sur échelle mel, un trait tous les 5 ms), `align::alignPath` (recherche du chemin d'appariement dans une bande de ±1,5 s, vitesse du double entre ×0,5 et ×2, réglage de « serrage »), `align::makeWarpMap` (courbe temps de sortie -> échantillon source). Aucune dépendance.

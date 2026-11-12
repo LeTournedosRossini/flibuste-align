@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 // Fiche de réglages d'un calage, lisible et écrivable en JSON (format « flibuste-align-settings », version 1).
 //

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /* Compilé en C (pas en C++) : l'en-tête doit être valide pour un compilateur C. Rend 1 si tout est cohérent. */
 #include "align/align_c.h"
 

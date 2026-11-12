@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Compare Rubber Band (R2 « faster », R3 « finer ») et Signalsmith Stretch sur des doublures synthétiques à correspondance connue.
 // Écrit les WAV dans le dossier donné en argument pour l'écoute, et affiche : erreur de calage, hauteur (cents), consonnes, temps de calcul.
 #include <chrono>

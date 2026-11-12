@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 // Rendu du double recalé : applique une WarpMap (temps du guide -> échantillon du double) avec l'étireur choisi.
 // Trois moteurs au choix : Signalsmith Stretch (par défaut), Rubber Band R2 (« faster ») et Rubber Band R3 (« finer »).

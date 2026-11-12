@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /* Démonstration et test de bout en bout de l'interface C, en C pur :
  *   align_demo guide.wav double.wav onsets.txt
  * Lit les deux fichiers, analyse, vérifie le chemin sur les débuts de notes connus (onsets.txt), rend, relit l'analyse sérialisée et vérifie que le rendu est

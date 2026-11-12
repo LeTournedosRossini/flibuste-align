@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 // Alignement temporel d'une prise (« double ») sur une autre (« guide »), pour la voix chantée et les phrases de guitare.
 // Principe : analyse spectrale des deux signaux (coefficients cepstraux sur échelle mel, un trait tous les 5 ms), puis recherche du meilleur

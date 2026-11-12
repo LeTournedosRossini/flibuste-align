@@ -46,4 +46,4 @@ Mesuré (Linux, 44,1 kHz, mono, voir `tests/test_c_api.cpp`) :
 `ctest` (ou `align_demo ref/guide.wav ref/double.wav ref/onsets.txt`) : le chemin doit retrouver les débuts de notes de `onsets.txt` (erreur moyenne sous 15 ms, pire sous 45 ms), la sortie a la durée du guide, l'analyse relue donne le même rendu, l'annulation est propre. Le même scénario, écrit côté Rust, est le test d'intégration attendu côté DAW.
 
 ## Licences
-GPLv3 pour l'ensemble (`LICENSE-GPLv3`) ; Rubber Band : GPL v2 ou ultérieure ; Signalsmith Stretch / Linear : MIT ; dr_wav : domaine public / MIT-0.
+GPLv3 ou ultérieure pour l'ensemble de ce paquet (`LICENSE-GPLv3`, identifiant SPDX `GPL-3.0-or-later` en tête de chaque fichier) ; Rubber Band : GPL v2 ou ultérieure ; Signalsmith Stretch / Linear : MIT ; dr_wav : domaine public / MIT-0.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // Fabrique les deux fichiers audio de référence pour l'intégration (guide et double synthétiques, vérité connue) :
 //   make_reference dossier   ->  guide.wav, double.wav (mono 44,1 kHz, 16 bits) et onsets.txt (temps du guide, temps du double, en secondes)
 #include <cstdio>

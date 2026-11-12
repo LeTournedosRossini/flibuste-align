@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Fabrique dist/align-native/ : le paquet autonome de sources que DAW compile (crates/align/native/). Relancer après toute modification du cœur."""
 import shutil, sys
 from pathlib import Path

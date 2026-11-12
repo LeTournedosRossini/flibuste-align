@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 // flibuste-align : cale un double sur un guide.
 //   align_cli guide.wav double.wav sortie.wav [--engine signalsmith|r2|r3] [--protect 0..1] [--tightness 0..1]
 //                                             [--max-shift secondes] [--chroma poids] [--harmony] [--strength 0..1 | --strength-points t:force,t:force,... | --suggest-strength ms] [--open-ends] [--write-consonants fichier.txt]

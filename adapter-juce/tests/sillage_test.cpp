@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Essai sans interface du processeur Sillage : faux hôte (transport + entrée latérale), capture, calcul en arrière-plan, lecture, état sauvegardé.
 #include <cmath>
 #include <cstdio>

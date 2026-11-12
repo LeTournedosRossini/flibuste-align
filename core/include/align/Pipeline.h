@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 // Chaîne complète en deux temps, pour que l'outil en ligne de commande et le plugin fassent exactement la même chose :
 //   1. analyse (lente, une fois) : chemin d'alignement + consonnes du double ;

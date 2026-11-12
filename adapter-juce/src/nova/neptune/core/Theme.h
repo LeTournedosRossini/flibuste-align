@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-only
 #pragma once
 // Thèmes visuels (palier 0) : jetons de couleur des 4 thèmes de la maquette (design/neptune_ui.html), sans JUCE.
 // Les valeurs sont copiées telles quelles de la maquette ; le réglage de contraste 0–4 est le port exact de

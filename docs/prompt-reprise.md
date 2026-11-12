@@ -7,7 +7,7 @@ Colle ce texte au début de la nouvelle discussion.
 Tu reprends le projet **flibuste-align** dans `/home/jean/Bureau/FlibusteSuite/flibuste-align`. Réponds-moi en français, simplement, en disant ce qui est fait et ce qui est vérifié ou non. Commence par lire `docs/README.md`, la mémoire (`project-flibuste-align.md`), `echanges/etat-versions.md` et le dernier message pour DAW : `echanges/messages/2026-11-08_1915_de-neptune_pour-daw-interface-c-livree-align-native.md`.
 
 ## Le projet
-Équivalent libre (GPLv3) de VocAlign : caler une prise « double » sur une prise « guide » sans changer la hauteur, surtout pour des voix chantées, en mono (stéréo si robuste). Trois livrables :
+Équivalent libre (GPLv3 ou ultérieure ; plugin Sillage en AGPLv3 ou ultérieure à cause de JUCE) de VocAlign : caler une prise « double » sur une prise « guide » sans changer la hauteur, surtout pour des voix chantées, en mono (stéréo si robuste). Trois livrables :
 - la bibliothèque `align_*` et l'outil `align_cli` ;
 - le plugin CLAP **Sillage** (nom provisoire) pour les autres hôtes comme Reaper ;
 - l'**interface C `align_c.h`** (paquet `dist/align-native/`, version 1), que DAW (mon hôte en Rust + Tauri, dans `/home/jean/Bureau/DAW perso`) intégrera directement, avec une interface dans le style DAW et non Flibuste.

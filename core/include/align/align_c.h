@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /*
  * flibuste-align : interface C pour caler une doublure (« double ») sur une prise de référence (« guide »), sans changer la hauteur.
  *

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 #pragma once
 // Habillage NOVA de Sillage : couleurs des jetons du thème de la suite (dark, bois, clair, haut contraste) et réglage de contraste, lus dans
 // settings.json de Neptune. Seule la couleur et la forme des composants viennent de NOVA ; les composants sont ceux de JUCE.

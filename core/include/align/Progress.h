@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 // Progression et annulation des calculs longs. Le rappel reçoit une fraction de 0 à 1 et rend vrai pour ANNULER. Il est installé pour le fil courant
 // (aucun état global : plusieurs calculs en parallèle sur des fils différents ont chacun le leur). Une annulation lève `align::Cancelled`, que l'interface C

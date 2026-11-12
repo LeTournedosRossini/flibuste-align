@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
 // Voix chantée synthétique pour les essais : voyelles à deux formants, vibrato, souffle, consonnes bruitées avant certaines notes.
 // Deux prises « chantent » les mêmes notes à des moments différents : on connaît donc la vraie correspondance de temps.
