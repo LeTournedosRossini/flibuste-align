@@ -1,0 +1,117 @@
+name: build
+
+# Pas de lancement à chaque poussée (quota GitHub) : à la main, ou en poussant une étiquette « v* » (Release de Sillage et du paquet align-native).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      os:
+        description: "Systèmes à compiler"
+        type: choice
+        default: all
+        options: [all, Linux, Windows, macOS]
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(github.event.inputs.os == 'Linux' && '[{"name":"Linux","os":"ubuntu-24.04"}]' || github.event.inputs.os == 'Windows' && '[{"name":"Windows","os":"windows-latest"}]' || github.event.inputs.os == 'macOS' && '[{"name":"macOS","os":"macos-latest"}]' || '[{"name":"Linux","os":"ubuntu-24.04"},{"name":"Windows","os":"windows-latest"},{"name":"macOS","os":"macos-latest"}]') }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Dépendances système (Linux, liste de la doc JUCE)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libasound2-dev libjack-jackd2-dev ladspa-sdk libcurl4-openssl-dev \
+            libfreetype-dev libfontconfig1-dev \
+            libx11-dev libxcomposite-dev libxcursor-dev libxext-dev libxinerama-dev \
+            libxrandr-dev libxrender-dev libxi-dev \
+            libglu1-mesa-dev mesa-common-dev libegl-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DALIGN_BUILD_TOOLS=OFF
+
+      - name: Build (cœur + tests)
+        run: cmake --build build --config Release --parallel --target align_core_tests
+
+      - name: Tests du cœur
+        if: runner.os != 'Windows'
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      # Windows : ctest passe les noms de tests dans la page de code locale ; on lance le programme directement.
+      - name: Tests du cœur (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: build/tests/Release/align_core_tests.exe
+
+      - name: Build (plugin Sillage, CLAP)
+        run: cmake --build build --config Release --parallel ${{ runner.os == 'Linux' && '2' || '4' }} --target Sillage_CLAP
+
+      - name: Archive Sillage.clap
+        shell: bash
+        run: |
+          CLAP=$(find build/adapter-juce -name 'Sillage.clap' -print -quit)
+          test -n "$CLAP" || { echo "Sillage.clap introuvable"; exit 1; }
+          mkdir -p dist/stage
+          cp -R "$CLAP" dist/stage/
+          cp LICENSE dist/stage/LICENSE-GPL-3.0
+          cp adapter-juce/LICENSE-AGPL-3.0 dist/stage/LICENSE-AGPL-3.0
+          cd dist/stage
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            7z a "../Sillage-${{ matrix.name }}.zip" Sillage.clap LICENSE-GPL-3.0 LICENSE-AGPL-3.0
+          else
+            tar -czf "../Sillage-${{ matrix.name }}.tar.gz" Sillage.clap LICENSE-GPL-3.0 LICENSE-AGPL-3.0
+          fi
+          cd ../..
+          rm -rf dist/stage
+          ls -la dist
+
+      # Le paquet de sources align-native (interface C) : identique sur les trois systèmes, on ne le fabrique qu'une fois.
+      - name: Paquet align-native
+        if: runner.os == 'Linux'
+        run: |
+          python3 tools/make_daw_bundle.py
+          tar -czf dist/align-native.tar.gz -C dist align-native
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Sillage-${{ matrix.name }}
+          path: dist/*.zip
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v7
+        if: runner.os != 'Windows'
+        with:
+          name: Sillage-${{ matrix.name }}-archive
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    # Publie une Release GitHub quand on pousse une étiquette « v* » (ex. : git tag v0.1.0 && git push --tags).
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Créer la Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -la dist
+          gh release create "${{ github.ref_name }}" dist/* \
+            --repo "${{ github.repository }}" \
+            --title "Sillage ${{ github.ref_name }}" \
+            --generate-notes \
+            --prerelease
