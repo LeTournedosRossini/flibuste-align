@@ -194,7 +194,7 @@ TEST_CASE ("interface C : tableaux pour l'interface, consonnes modifiables, forc
     // Décalage appliqué : force 0 -> zéro partout ; force 1 -> le chemin.
     std::vector<double> shift (n);
     REQUIRE (align_applied_shift (an, "{\"general\":{\"strength\":0}}", shift.data(), n, &n) == ALIGN_OK);
-    for (double v : shift) REQUIRE (v == 0.0);
+    for (double v : shift) REQUIRE (std::fabs (v) < 1e-12); // zéro, aux arrondis près
     REQUIRE (align_applied_shift (an, nullptr, shift.data(), n, &n) == ALIGN_OK);
     double mx = 0;
     for (double v : shift) mx = std::max (mx, std::fabs (v));

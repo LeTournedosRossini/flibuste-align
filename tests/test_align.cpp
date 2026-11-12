@@ -173,7 +173,7 @@ TEST_CASE ("force variable : phrase calée à fond, le reste presque tel quel")
     CHECK (r[200] == Catch::Approx (200 * 0.005 + 0.1));  // t = 1,0 s : force 1, décalage complet
     CHECK (r[110] == Catch::Approx (110 * 0.005 + 0.05)); // t = 0,55 s : milieu de la montée
     CHECK (r[350] == Catch::Approx (350 * 0.005));        // t = 1,75 s : force 0
-    for (size_t i = 1; i < r.size(); ++i) CHECK (r[i] >= r[i - 1]); // la courbe reste croissante
+    for (size_t i = 1; i < r.size(); ++i) CHECK (r[i] >= r[i - 1] - 1e-12); // la courbe reste croissante (aux arrondis près)
     CHECK (align::applyStrength (path, 0.005, std::vector<align::StrengthPoint> {}) == path);
 }
 

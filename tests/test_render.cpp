@@ -103,7 +103,7 @@ TEST_CASE ("chaîne : analyser une fois, rendre plusieurs fois avec d'autres ré
     const auto s1 = align::appliedShift (an, full), s0 = align::appliedShift (an, none);
     double m1 = 0, m0 = 0;
     for (size_t i = 0; i < s1.size(); ++i) { m1 = std::max (m1, std::fabs (s1[i])); m0 = std::max (m0, std::fabs (s0[i])); }
-    CHECK (m0 == 0.0);
+    CHECK (m0 < 1e-12); // zéro, aux arrondis près (macOS : multiplication-addition fusionnée)
     CHECK (m1 > 0.01);
 }
 
