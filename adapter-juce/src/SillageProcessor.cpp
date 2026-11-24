@@ -151,11 +151,21 @@ void SillageProcessor::parameterChanged (const juce::String& id, float)
 // ---------------------------------------------------------------------------------------------------------------- audio
 void SillageProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
+    // Bloc en cours : impair. Sorti par n'importe quel return, le compteur repasse pair.
+    struct EpochGuard
+    {
+        explicit EpochGuard (std::atomic<std::uint32_t>& e) : epoch (e) { epoch.fetch_add (1); }
+        ~EpochGuard() { epoch.fetch_add (1); }
+        std::atomic<std::uint32_t>& epoch;
+    } epochGuard (audioEpoch_);
+
     juce::ScopedNoDenormals noDenormals;
     const int n = buffer.getNumSamples();
+    // Un hôte peut donner moins de voies que la disposition annoncée : ne jamais lire au-delà.
+    if (n <= 0 || buffer.getNumChannels() < getMainBusNumInputChannels() || getMainBusNumInputChannels() <= 0) return;
     auto main = getBusBuffer (buffer, true, 0);
     const int nch = main.getNumChannels();
-    if (n <= 0 || nch <= 0) return;
+    if (nch <= 0) return;
 
     bool playing = false, havePos = false;
     std::int64_t pos = 0;
@@ -183,32 +193,41 @@ void SillageProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
     }
     if (ph == (int) Phase::Capturing)
     {
+        // Le pointeur est lu une seule fois pour tout le bloc. Il peut être nul si l'interface vient d'effacer la capture (« Tout effacer ») :
+        // dans ce cas on ne touche à rien (l'interface a déjà remis la phase à « repos »), le double passe tel quel.
         auto* cap = captureRaw_.load();
-        const std::size_t w = cap ? cap->written.load() : 0;
+        if (cap == nullptr) return;
+        const std::size_t w = cap->written.load();
         const bool contiguous = havePos && pos == cap->startSong + (std::int64_t) w;
-        if (! cap || ! playing || ! contiguous || stopRequested_.load())
+        if (! playing || ! contiguous || stopRequested_.load())
         {
             phase_ = (int) Phase::Computing; // arrêt, saut dans le morceau ou demande de l'interface
             stopRequested_ = false;
         }
         else
         {
-            const std::size_t room = cap->capacity - w, take = std::min<std::size_t> ((std::size_t) n, room);
-            for (int c = 0; c < cap->channels; ++c)
+            const std::size_t room = cap->capacity > w ? cap->capacity - w : 0, take = std::min<std::size_t> ((std::size_t) n, room);
+            for (int c = 0; c < cap->channels && (std::size_t) c < cap->dub.size(); ++c)
             {
                 const float* src = main.getReadPointer (std::min (c, nch - 1));
-                std::copy (src, src + take, cap->dub[(std::size_t) c].begin() + (std::ptrdiff_t) w);
+                if (src != nullptr) std::copy (src, src + take, cap->dub[(std::size_t) c].begin() + (std::ptrdiff_t) w); // une voie absente reste à zéro
             }
-            if (haveSide)
+            // Entrée latérale (le guide) : seulement les voies réellement fournies par l'hôte (une voie sans données reste ignorée ;
+            // sans aucune voie utile le guide reste à zéro, et le calcul le signale : « aucun guide reçu »).
+            if (haveSide && getChannelIndexInProcessBlockBuffer (true, 1, 0) + getBus (true, 1)->getNumberOfChannels() <= buffer.getNumChannels())
             {
                 auto side = getBusBuffer (buffer, true, 1);
-                const int sc = side.getNumChannels();
-                for (std::size_t i = 0; i < take; ++i)
-                {
-                    float s = 0.f;
-                    for (int c = 0; c < sc; ++c) s += side.getReadPointer (c)[i];
-                    cap->guide[w + i] = sc > 0 ? s / (float) sc : 0.f;
-                }
+                const float* sideSrc[8];
+                int sc = 0;
+                for (int c = 0; c < side.getNumChannels() && sc < 8; ++c)
+                    if (const float* sp = side.getReadPointer (c)) sideSrc[sc++] = sp;
+                if (sc > 0)
+                    for (std::size_t i = 0; i < take; ++i)
+                    {
+                        float s = 0.f;
+                        for (int c = 0; c < sc; ++c) s += sideSrc[c][i];
+                        cap->guide[w + i] = s / (float) sc;
+                    }
             }
             cap->written = w + take;
             if (take < (std::size_t) n || cap->written >= cap->capacity) phase_ = (int) Phase::Computing;
@@ -238,6 +257,16 @@ void SillageProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
 }
 
 // ----------------------------------------------------------------------------------------------------------- commandes
+// Attend la fin du bloc audio en cours, s'il y en a un (compteur impair). À appeler APRÈS avoir remis captureRaw_ à nul : tout bloc qui
+// démarre ensuite lit un pointeur nul. Bornée (200 ms) : un hôte qui ne rappelle plus l'audio ne bloque pas l'interface.
+void SillageProcessor::waitAudioIdle()
+{
+    const auto e = audioEpoch_.load();
+    if ((e & 1u) == 0) return;
+    const auto end = juce::Time::getMillisecondCounter() + 200;
+    while (audioEpoch_.load() == e && juce::Time::getMillisecondCounter() < end) juce::Thread::sleep (1);
+}
+
 void SillageProcessor::armCapture()
 {
     if (phase() == Phase::Computing || phase() == Phase::Capturing) return;
@@ -252,6 +281,9 @@ void SillageProcessor::armCapture()
         std::lock_guard<std::mutex> lk (dataMutex_);
         message_ = {};
     }
+    // L'ancienne capture n'est libérée qu'une fois le bloc audio en cours fini (le fil audio en tient un pointeur brut).
+    captureRaw_ = nullptr;
+    waitAudioIdle();
     capture_ = cap;
     sampleRateStale_ = 0;
     stopRequested_ = false;
@@ -271,6 +303,7 @@ void SillageProcessor::clearAll()
 {
     phase_ = (int) Phase::Idle;
     captureRaw_ = nullptr;
+    waitAudioIdle(); // le bloc audio en cours peut encore tenir l'ancienne capture : on attend sa fin avant de la libérer plus bas
     if (worker_.joinable()) worker_.join();
     jobDone_ = false;
     jobCaptureId_ = nullptr;
@@ -705,8 +738,9 @@ void SillageProcessor::setStateInformation (const void* data, int size)
         std::lock_guard<std::mutex> lk (dataMutex_);
         analysis_ = an;
     }
-    capture_ = cap;
     captureRaw_ = nullptr;
+    waitAudioIdle();
+    capture_ = cap;
     restoredNeedsRender_ = true;
     phase_ = (int) Phase::Computing;
 }

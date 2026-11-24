@@ -125,6 +125,10 @@ private:
     // capture (audio -> message)
     std::shared_ptr<SillageCapture> capture_;
     std::atomic<SillageCapture*> captureRaw_ { nullptr };
+    // Compteur de blocs audio : impair pendant un bloc, pair entre deux. Sert à ne libérer une capture qu'une fois le bloc en cours fini
+    // (voir waitAudioIdle) : le fil audio garde un pointeur brut sur la capture pendant tout le bloc.
+    std::atomic<std::uint32_t> audioEpoch_ { 0 };
+    void waitAudioIdle();
     std::atomic<std::int64_t> lastPlayhead_ { 0 };
     std::atomic<bool> playheadKnown_ { false };
 

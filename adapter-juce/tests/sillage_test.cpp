@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Essai sans interface du processeur Sillage : faux hôte (transport + entrée latérale), capture, calcul en arrière-plan, lecture, état sauvegardé.
+#include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <thread>
 
 #include "SillageProcessor.h"
 #include "SynthVoice.h"
@@ -245,6 +248,77 @@ int main (int argc, char** argv)
     const double cRest = envelopeCorrelation (restored, again, (std::size_t) songStart + 2000, (std::size_t) songStart + N - 2000);
     std::printf ("       corrélation d'enveloppe restauré / original : %.4f\n", cRest);
     check (cRest > 0.99, "après restauration, la lecture a la même enveloppe que l'original");
+
+    // 6. Entrées incomplètes (hôte qui donne des voies sans données) : pas de plantage, la capture continue, le calcul signale l'absence de guide.
+    {
+        SillageProcessor r;
+        r.setRateAndBufferSizeDetails (44100.0, 512);
+        r.prepareToPlay (44100.0, 512);
+        FakeHost h2;
+        r.setPlayHead (&h2);
+        r.parameters().getParameter ("caplen")->setValueNotifyingHost (0.f);
+        r.armCapture();
+        std::vector<float> a (512, 0.1f), b (512, 0.1f);
+        float* chans[4] = { a.data(), b.data(), nullptr, nullptr }; // la chaîne latérale (voies 3 et 4) sans données
+        juce::AudioBuffer<float> buf (chans, 4, 512);
+        juce::MidiBuffer midi;
+        h2.playing = true;
+        for (int i = 0; i < 60; ++i) { h2.pos = 1000 + 512 * i; r.processBlock (buf, midi); }
+        check (r.phase() == SillageProcessor::Phase::Capturing && r.capturedSeconds() > 0.6, "chaîne latérale sans données : la capture continue sans planter");
+        float* noMain[4] = { nullptr, nullptr, nullptr, nullptr }; // aucune voie avec données
+        juce::AudioBuffer<float> bufNoMain (noMain, 4, 512);
+        h2.pos = 1000 + 512 * 60;
+        r.processBlock (bufNoMain, midi);
+        check (r.phase() == SillageProcessor::Phase::Capturing, "aucune voie avec données : pas de plantage");
+        float* few[1] = { a.data() };
+        juce::AudioBuffer<float> bufFew (few, 1, 512); // moins de voies que la disposition annoncée
+        h2.pos = 1000 + 512 * 61;
+        r.processBlock (bufFew, midi);
+        check (true, "buffer avec moins de voies que prévu : pas de plantage");
+        h2.playing = false;
+        r.processBlock (buf, midi); // arrêt : la capture se termine
+        check (waitFor (r, SillageProcessor::Phase::Idle, 60000), "sans guide reçu, le calcul s'arrête au repos (pas de rendu)");
+        std::printf ("       message : %s\n", r.statusText().toRawUTF8());
+    }
+
+    // 7. Interface et audio en même temps : armer, arrêter, effacer pendant que l'audio tourne (la capture est libérée sous les pieds de l'audio
+    //    si le compteur de blocs ne fait pas son travail ; sous AddressSanitizer, c'est une erreur franche).
+    {
+        SillageProcessor r;
+        r.setRateAndBufferSizeDetails (44100.0, 256);
+        r.prepareToPlay (44100.0, 256);
+        FakeHost h3;
+        r.setPlayHead (&h3);
+        r.parameters().getParameter ("caplen")->setValueNotifyingHost (0.f);
+        std::atomic<bool> stop { false };
+        std::atomic<int> blocks { 0 };
+        std::thread audio ([&] {
+            juce::AudioBuffer<float> b (4, 256);
+            juce::MidiBuffer m;
+            b.clear();
+            juce::int64 pos = 0;
+            while (! stop.load())
+            {
+                h3.playing = true;
+                h3.pos = pos;
+                r.processBlock (b, m);
+                pos += 256;
+                ++blocks;
+                std::this_thread::sleep_for (std::chrono::microseconds (50));
+            }
+        });
+        for (int i = 0; i < 300; ++i)
+        {
+            r.armCapture();
+            std::this_thread::sleep_for (std::chrono::microseconds (500 + 400 * (i % 7)));
+            if (i % 3 == 0) r.finishCapture();
+            r.clearAll();
+        }
+        stop = true;
+        audio.join();
+        std::printf ("       %d blocs audio traités pendant les 300 cycles armer / effacer\n", blocks.load());
+        check (blocks.load() > 100, "interface et audio en même temps : aucun plantage");
+    }
 
     std::printf ("%s\n", failures == 0 ? "TOUT EST BON" : "DES ÉCHECS");
     return failures == 0 ? 0 : 1;
